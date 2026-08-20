@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { validate } from "./validate";
+import { validate } from "./validate.js";
 
 const REPO_ROOT = process.cwd();
 const BASELINE_PATH = resolve(REPO_ROOT, "scraper", "baseline-output.json");

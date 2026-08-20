@@ -1,3 +1,5 @@
+export type ValidationMode = "full" | "preview";
+
 export type ValidationResult = {
   pass: boolean;
   recordCount: number;
@@ -19,7 +21,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function validate(runOutput: unknown, baseline: unknown): ValidationResult {
+export function validate(
+  runOutput: unknown,
+  baseline: unknown,
+  mode: ValidationMode = "full",
+): ValidationResult {
   const diff: ValidationResult["diff"] = [];
 
   const baselineCount = Array.isArray(baseline) ? baseline.length : 0;
@@ -63,7 +69,10 @@ export function validate(runOutput: unknown, baseline: unknown): ValidationResul
     });
   }
 
-  if (
+  // row_count_sanity is skipped in preview mode: a heal preview is a small sample
+  // (often 1 record), not the full population, so a count-vs-baseline comparison is
+  // meaningless and would always false-fire. Only checked at full population scale.
+  if (mode === "full" &&
     baselineCount > 0 &&
     recordCount < baselineCount * ROW_COUNT_RATIO
   ) {
@@ -106,7 +115,10 @@ export function validate(runOutput: unknown, baseline: unknown): ValidationResul
       maxTitleValue = title;
     }
   }
-  if (
+  // no_mass_duplication is skipped in preview mode: a heal preview's sample size is
+  // too small for a 50%-of-records threshold to be meaningful - a single record is
+  // always 100% "duplicated" against itself. Only checked at full population scale.
+  if (mode === "full" &&
     countedForDuplication > 0 &&
     maxTitleCluster / countedForDuplication > DUPLICATION_RATIO
   ) {

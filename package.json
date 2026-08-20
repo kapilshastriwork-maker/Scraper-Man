@@ -2,6 +2,7 @@
   "name": "startup-hiring-signal-tracker",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "description": "A self-healing scraper that tracks open roles across startup careers pages spanning three different ATS/layout families, built on Bright Data Scraper Studio.",
   "engines": { "node": ">=22.0.0" },
   "scripts": {
@@ -11,7 +12,9 @@
     "scraper:approve": "tsx scraper/run-cli.ts approve",
     "validate": "tsx validator/run-validate.ts",
     "validate:test": "tsx validator/run-tests.ts",
-    "orchestrate": "echo \"placeholder - Phase 4: run self-healing loop\" && exit 0",
+    "orchestrate": "tsx orchestrator/orchestrate.ts",
+    "state:seed": "tsx orchestrator/seed-state-from-recon.ts",
+    "audit:view": "tsx orchestrator/view-audit-log.ts",
     "dev": "echo \"placeholder - Phase 5+: local dev entrypoint\" && exit 0"
   },
   "devDependencies": {
