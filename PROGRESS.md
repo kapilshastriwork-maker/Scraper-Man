@@ -1,7 +1,7 @@
 # Project Progress Log
 
 **Status:** Phase 1 in progress
-**Last updated:** 2026-08-20 — Phase 1
+**Last updated:** 2026-08-21 — Phase 1 (target narrowing)
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -14,7 +14,7 @@ Phase 1 of 7 — Foundation & target lock-in
 
 ## Phase Checklist
 - [x] Phase 1 — Foundation & target lock-in
-- [ ] Phase 2 — Build the base scraper in Scraper Studio
+- [ ] Phase 2 — Build the base scraper in Scraper Studio + build & deploy the demo page's actual HTML content to GitHub Pages (not just a placeholder stub)
 - [ ] Phase 3 — Validator
 - [ ] Phase 4 — Healing orchestrator
 - [ ] Phase 5 — Downstream + audit timeline
@@ -26,10 +26,10 @@ Phase 1 of 7 — Foundation & target lock-in
 ## Key Decisions
 
 - **Target sites (locked in `config/targets.json`):**
-  1. `https://www.retellai.com/careers` — custom-built page on the company's own domain, NOT a third-party ATS.
-  2. `https://jobs.ashbyhq.com/Linear` — Ashby ATS, JavaScript-rendered SPA.
-  3. `https://job-boards.greenhouse.io/kalshi` — Greenhouse ATS, traditional server-rendered.
-  - Rationale: these three deliberately span heterogeneous layout / ATS families (custom, JS-SPA, server-rendered). The whole project's claim is that self-healing *generalizes*, so the targets must not all share a single platform. A one-site lucky fix would invalidate the demo.
+  1. `https://www.retellai.com/careers` — `type: "real"`. Custom-built page on the company's own domain, NOT a third-party ATS. Primary data source for the live downstream hiring signal; expect natural content drift over the week (roles added/removed, minor copy changes).
+  2. `TBD — GitHub Pages URL` — `type: "demo"`. Static page we fully control, built to mirror the schema of the real target, used exclusively for the deliberate structural-break self-heal demo in Phase 7.
+  - Rationale (revised in Session 2): narrowed from **3 real targets** to **1 real target + 1 self-controlled demo target**. Reasons: (a) a demo page we fully own guarantees a genuine, filmable self-heal event instead of hoping a real site redesigns itself mid-hackathon; (b) keeps the project focused; (c) the "generalizes" story is reframed from "across 3 sites" to "across 2 kinds of breakage" — natural content drift on the real site vs. a deliberate structural redesign on the demo site. Removed Ashby/Linear and Greenhouse/Kalshi entirely.
+  - (Original 3-target rationale, superseded: heterogeneous ATS families — custom / JS-SPA / server-rendered — to prove healing generalizes across platforms.)
 
 - **Schema v1 (`config/schema.json`) is deliberately minimal** — only `role_title`, `location`, `job_url` (all string). v1 exists to get a working end-to-end pipeline (scrape → validate → store) first. `planned_v2_fields` (`department`, `employment_type`, `date_posted`) are *reserved in the schema but NOT extracted in v1* — they're staged intentionally for a later self-heal demo where a new field gets added as part of the healing loop.
 
@@ -60,7 +60,7 @@ ScraperMan/
 ├── package.json         # name, engines.node>=22, no-op placeholder scripts
 ├── tsconfig.json        # TS strict, ES2022/NodeNext
 ├── config/
-│   ├── targets.json     # 3 seed URLs + ATS notes (locked)
+│   ├── targets.json     # 2 targets: 1 real (Retell) + 1 self-controlled demo (TBD GH Pages)
 │   └── schema.json      # v1 fields + planned_v2_fields
 ├── scraper/            # (README stub) Phase 2 stores Collector ID here
 ├── validator/          # (README stub) Phase 3
@@ -79,6 +79,14 @@ ScraperMan/
 - **tsconfig `include`** currently covers `scraper/`, `validator/`, `orchestrator/`, `downstream/`, `config/` — may need to broaden as real code lands in later phases.
 
 ## Session Log (most recent entry first)
+
+### Session 2 — Phase 1 (target narrowing)
+- Narrowed `config/targets.json` from 3 real targets down to **1 real + 1 self-controlled demo**: Retell AI (real, `type: "real"`) + a TBD GitHub Pages demo page (`type: "demo"`). Removed the Ashby/Linear and Greenhouse/Kalshi entries entirely.
+- Rationale (recorded under Key Decisions): (a) owning the demo page guarantees a genuine, filmable self-heal event rather than hoping a real site redesigns mid-hackathon; (b) keeps the project focused; (c) reframes the "generalizes" claim from "across 3 sites" to "across 2 kinds of breakage" — natural content drift (real) vs. deliberate structural redesign (demo).
+- Updated README.md pitch & Architecture prose, and trimmed the SETUP_CHECKLIST.md scraper-library check step to just the Retell URL (the demo page won't have a Scraper Studio library scraper).
+- Updated the Phase 2 checklist note: Phase 2 now includes building and deploying the demo page's actual HTML content to GitHub Pages, not just placeholder-stubbing it.
+
+- **Next:** Phase 2 will build and deploy the demo page's HTML content in addition to creating the Scraper Studio scraper. Commit message: `Narrow targets: 1 real site + 1 self-controlled demo site`.
 
 ### Session 1 — Phase 1
 - Scaffolded the full repo per the Phase 1 plan: `config/`, four empty module dirs (`scraper/`, `validator/`, `orchestrator/`, `downstream/`), `.github/workflows/`, `demo-page/`, `docs/`.

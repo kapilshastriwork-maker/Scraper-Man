@@ -1,6 +1,6 @@
 # Startup Hiring Signal Tracker
 
-A self-healing scraper that tracks open roles across startup careers pages spanning three different ATS / layout families (a custom domain page, an Ashby JS-rendered SPA, and a Greenhouse server-rendered board) — proving that a healing approach generalizes rather than being a one-site lucky fix. Built for the WeMakeDevs Scrape-Verse hackathon on Bright Data Scraper Studio.
+A self-healing scraper that tracks open roles at a real startup careers page (Retell AI) and survives two kinds of breakage: natural content drift on the live site, and a deliberate structural redesign on a demo page we fully control. Built for the WeMakeDevs Scrape-Verse hackathon on Bright Data Scraper Studio.
 
 **Project state:** see [`PROGRESS.md`](./PROGRESS.md) — it is the source of truth for current phase, decisions, and cross-session context. Read it first at the start of every session.
 
@@ -28,7 +28,7 @@ This repo hosts everything that *wraps around* the scraper:
 - **CI loop** (Phase 6) — GitHub Actions running the orchestrator unattended
 - **Demo page** (Phase 7) — a GitHub Pages controlled-break practice target
 
-The three target sites are locked in `config/targets.json` and the field schema in `config/schema.json`.
+The two targets are locked in `config/targets.json` (1 real site + 1 self-controlled demo site) and the field schema in `config/schema.json`. The "generalizes" story is reframed from "across 3 sites" to "across 2 kinds of breakage": natural content drift on the real site vs. a deliberate structural redesign on the demo site.
 
 ## Setup
 
