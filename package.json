@@ -9,7 +9,8 @@
     "scraper:run": "tsx scraper/run-cli.ts run",
     "scraper:heal": "tsx scraper/run-cli.ts heal",
     "scraper:approve": "tsx scraper/run-cli.ts approve",
-    "validate": "echo \"placeholder - Phase 3: validate scraper output against schema\" && exit 0",
+    "validate": "tsx validator/run-validate.ts",
+    "validate:test": "tsx validator/run-tests.ts",
     "orchestrate": "echo \"placeholder - Phase 4: run self-healing loop\" && exit 0",
     "dev": "echo \"placeholder - Phase 5+: local dev entrypoint\" && exit 0"
   },

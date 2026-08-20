@@ -1,7 +1,7 @@
 # Project Progress Log
 
-**Status:** Phase 2 in progress
-**Last updated:** 2026-08-21 — Phase 2
+**Status:** Phase 3 done (pending review)
+**Last updated:** 2026-08-22 — Phase 3
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -10,44 +10,45 @@
 - Anything decided that future sessions must respect (naming, schema, target URLs, tech choices, tradeoffs) goes under Key Decisions, not just buried in the log.
 
 ## Current Phase
-Phase 2 of 7 — Build the base scraper in Scraper Studio + build (and later deploy) the demo page
+Phase 3 of 7 — Validator (done, pending review)
 
 ## Phase Checklist
 - [x] Phase 1 — Foundation & target lock-in
-- [ ] Phase 2 — Build the base scraper in Scraper Studio + build & deploy the demo page's actual HTML content to GitHub Pages (not just a placeholder stub) — **in progress** (scraper created, demo page built, deployment deferred — see Known Issues)
-- [ ] Phase 3 — Validator
+- [x] Phase 2 — Build the base scraper in Scraper Studio + build & deploy the demo page's actual HTML content to GitHub Pages (not just a placeholder stub) *(scraper created + demo page built; GH Pages deployment deliberately deferred — see Known Issues)*
+- [x] Phase 3 — Validator *(done, pending review)*
 - [ ] Phase 4 — Healing orchestrator
 - [ ] Phase 5 — Downstream + audit timeline
 - [ ] Phase 6 — Unattended CI loop + scale
 - [ ] Phase 7 — Controlled-break demo, polish, submit
 
-> Phase 1 is done. Phase 2 is in progress: the real scraper is created and producing populated output (31 records), the demo page is built locally but not yet deployed (needs a GitHub remote which is deliberately deferred).
+> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes.
 
 ## Key Decisions
 
 - **Target sites (locked in `config/targets.json`):**
-  1. `https://jobs.ashbyhq.com/retell-ai` — `type: "real"`, Ashby-hosted job board. **Pivot from Session 3:** the originally-locked `https://www.retellai.com/careers` is a Webflow marketing shell with no job data in its own page content — its "Open Positions" section embeds the Ashby board in an iframe. After creating a scraper against it and getting an empty `jobs` array, we pivoted to the actual data source (`jobs.ashbyhq.com/retell-ai`). This is itself a small but real example of the kind of unexpected result that would normally warrant a heal — diagnosed manually here because an empty scrape against a page with no scrapeable content is not a layout break, it's a wrong-data-source error (not healable).
-  2. `TBD — GitHub Pages URL` — `type: "demo"`. Static page we fully control, built to mirror the schema of the real target, used exclusively for the deliberate structural-break self-heal demo in Phase 7.
-  - Rationale (revised in Session 2, retained): 1 real target + 1 self-controlled demo target. (a) Owning the demo page guarantees a genuine, filmable self-heal event instead of hoping a real site redesigns mid-hackathon. (b) Kept the project focused. (c) Reframed "generalizes" from "across 3 sites" to "across 2 kinds of breakage": natural content drift on the real site vs. a deliberate structural redesign on the demo site.
-  - The `targets.json` real target URL needs updating to the Ashby URL — currently still the old retellai.com/careers URL. Tracked in Known Issues / Open Questions.
+  - `https://jobs.ashbyhq.com/retell-ai` (id `retell`, `type: "real"`) — Ashby-hosted job board, the actual data source. `humanPageUrl: "https://www.retellai.com/careers"` is the marketing page (Webflow) that embeds this board client-side; it has no server-side job data itself, which is why we scrape the Ashby URL directly. **Pivot from Session 3:** originally locked the marketing URL, got an empty `jobs` array, and pivoted to the Ashby board.
+  - `TBD — GitHub Pages URL` (id `demo`, `type: "demo"`) — static page we fully control, used exclusively for the Phase 7 deliberate structural-break self-heal demo.
+  - Rationale: 1 real target + 1 self-controlled demo target. (a) Owning the demo page guarantees a genuine, filmable self-heal event. (b) Focused. (c) "Generalizes" reframed to "across 2 kinds of breakage" — natural drift on the real site vs. deliberate structural redesign on the demo site.
+
+- **Schema (`config/schema.json`) — aligned with real output in Phase 3.** `fields` is now an inline array of `{ name, required, type, description }` entries matching the real scraper's field names (not the original v1 guesses): `job_title` (required), `location` (required), `application_url` (required), `location_type` (optional), `product_page_url` (optional). `planned_v2_fields` stays as its own separate top-level array — unchanged, still aspirational: `department`, `employment_type`, `date_posted` (reserved for a later self-heal schema-extension demo, NOT extracted today).
 
 - **Scraper (Bright Data Scraper Studio):**
   - Active collector ID: `c_mt21unzzuq4w8c702`, target `https://jobs.ashbyhq.com/retell-ai`, created 2026-08-20T21:45:40.607Z. View: https://brightdata.com/cp/scrapers/c_mt21unzzuq4w8c702
   - Field description at creation: `job title, location (remote/onsite/city), and the direct application URL for each open role listed on this job board`
-  - Actual output fields returned: `job_title`, `location`, `application_url` (matches v1 schema conceptually but field names differ; Phase 3's validator will alias `job_title`→`role_title` and `application_url`→`job_url`). Also returns bonus `location_type` (e.g. "Applied AI", "On-site"), `product_page_url`, `input` — not in v1 schema but harmless extras.
+  - Actual output fields returned: `job_title`, `location`, `application_url` (required), plus `location_type` (e.g. "Applied AI", "On-site"), `product_page_url`, `input` (optional/bonus). Phase 3 locked these names into `config/schema.json` and switched the validator to use them directly — no aliasing needed.
   - Abandoned collector: `c_mt21dfrd1jpyf7wgrx` (original retellai.com/careers target — returned empty `jobs` array; left on Bright Data as a record, not deleted).
   - Baseline output: `scraper/baseline-output.json` — frozen "known good" reference, 31 records, raw bytes unmodified (UTF-8 no BOM). Phase 3's validator compares future runs against this. Never overwritten.
   - Run outputs: `scraper/runs/<ISO-timestamp>.json` per run + `scraper/runs/latest.json` as a stable mirror, written by `npm run scraper:run` (backed by `scraper/run-cli.ts`). stdout gets only a short summary (record count + timestamp), the full JSON stays in the files.
 
-- **Schema v1 (`config/schema.json`) is deliberately minimal** — only `role_title`, `location`, `job_url` (all string). v1 exists to get a working end-to-end pipeline (scrape → validate → store) first. `planned_v2_fields` (`department`, `employment_type`, `date_posted`) are *reserved in the schema but NOT extracted in v1* — they're staged intentionally for a later self-heal demo where a new field gets added as part of the healing loop.
+- **Schema v1 (`config/schema.json`) is deliberately minimal** — only `job_title`, `location`, `application_url` (required), plus `location_type`, `product_page_url` (optional). v1 exists to get a working end-to-end pipeline (scrape → validate → store) first. `planned_v2_fields` (`department`, `employment_type`, `date_posted`) are *reserved in the schema but NOT extracted in v1* — they're staged intentionally for a later self-heal demo where a new field gets added as part of the healing loop.
 
 - **Scraper is NOT in this repo (just the wrapper).** The actual scraper template lives in Bright Data Scraper Studio and is driven via the `bdata` CLI. This repo only hosts the wrapper: `config/scraper.json` (collector metadata), `scraper/run-cli.ts` (orchestration), `scraper/baseline-output.json` (frozen reference), `scraper/runs/` (run history), and later-phase validator + healing + downstream + CI. Do not write local extraction code — extraction belongs in Scraper Studio templates.
 
 - **Tech stack:**
   - Node.js 22 (pinned via `.nvmrc` = `22` and `package.json` `engines.node` = `>=22.0.0`) — but the current dev machine has Node 24; the strict `>=22.0.0` still satisfies.
   - TypeScript (strict, ES2022 / NodeNext), `tsconfig.json` configured.
-  - `tsx` (devDependency) runs `.ts` directly without a build step; `@types/node` for typing. `tsc --noEmit` is the typecheck.
-  - Real (not placeholder) npm scripts for the scraper as of Phase 2: `scraper:create`, `scraper:run`, `scraper:heal`, `scraper:approve` — all backed by `scraper/run-cli.ts`. `validate`, `orchestrate`, `dev` are still no-op placeholders until their phases.
+  - `tsx` (devDependency) runs `.ts` directly without a build step; `@types/node` for typing. `tsc --noEmit` is the typecheck (must pass before any phase commit).
+  - Real npm scripts as of Phase 3: `scraper:create | scraper:run | scraper:heal | scraper:approve` (backed by `scraper/run-cli.ts`), `validate` (backed by `validator/run-validate.ts`), `validate:test` (backed by `validator/run-tests.ts`). `orchestrate`, `dev` still no-op placeholders until their phases.
 
 - **Git policy:** default branch `main`. **No remote yet** — left unset intentionally; the GitHub repo + remote will be wired up manually before Phase 6, when GitHub Actions needs somewhere to run. Do not add a remote or create the GitHub repo in Phases 1-5 unless explicitly asked.
 
@@ -71,8 +72,8 @@ ScraperMan/
 ├── tsconfig.json        # TS strict, ES2022/NodeNext
 ├── node_modules/        # gitignored
 ├── config/
-│   ├── targets.json     # 2 targets: 1 real (NOTE: still retellai.com/careers URL — needs Ashby update; see Known Issues) + 1 self-controlled demo (TBD GH Pages)
-│   ├── schema.json      # v1 fields + planned_v2_fields
+│   ├── targets.json     # 2 targets: 1 real (Ashby URL + humanPageUrl marketing page) + 1 self-controlled demo (TBD GH Pages)
+│   ├── schema.json      # fields (inline {name,required}: job_title/location/application_url + optionals), planned_v2_fields
 │   └── scraper.json     # collectorId c_mt21unzzuq4w8c702, targetUrl, abandonedCollectorIds, fieldDescription
 ├── scraper/             # Phase 2 — wrapper around the Bright Data scraper
 │   ├── README.md        # collector metadata, abandoned note, re-run instructions
@@ -81,7 +82,15 @@ ScraperMan/
 │   └── runs/            # every npm run scraper:run writes <ISO-timestamp>.json + latest.json
 │       ├── 2026-08-20T21-54-36-908Z.json
 │       └── latest.json
-├── validator/          # (README stub) Phase 3
+├── validator/           # Phase 3 — rule-based validator
+│   ├── README.md        # 5 rules, validate() signature, npm scripts, fixtures
+│   ├── validate.ts      # pure validate(runOutput, baseline) function
+│   ├── run-validate.ts  # CLI: npm run validate [-- <runPath>]
+│   ├── run-tests.ts     # CLI: npm run validate:test (asserts all fixtures)
+│   └── test-fixtures/
+│       ├── passing-real-baseline.json  # exact copy of baseline (expect PASS)
+│       ├── failing-empty-array.json    # [] (expect FAIL on non_empty_array only)
+│       └── failing-high-nulls.json     # baseline with 4/31 job_title=null (expect FAIL on required_fields_present only)
 ├── orchestrator/       # (README stub) Phase 4
 ├── downstream/         # (README stub) Phase 5
 ├── demo-page/          # static fake careers page (Northwind Labs) — built but NOT deployed
@@ -93,8 +102,6 @@ ScraperMan/
 
 ## Known Issues / Open Questions
 
-- **`config/targets.json` real-target URL is stale.** It still lists `https://www.retellai.com/careers` but the actual scraper now points at `https://jobs.ashbyhq.com/retell-ai` (recorded correctly in `config/scraper.json`). `targets.json` needs updating in Phase 3 (or sooner) to match — and the `notes` field should reflect the iframe/embed pivot rationale. Not urgent because `scraper.json` is what the run script actually reads.
-
 - **Demo page is built locally but not deployed** — needs a GitHub repo + remote + Pages enabled in Settings before Phase 7. Manual step, not agent-doable. The `targets.json` `type: "demo"` URL stays `TBD — GitHub Pages URL` until then.
 
 - **SETUP_CHECKLIST.md library-check step still pending.** The other 4 of 5 steps functionally verified during Phase 2: `bdata login --device`'s token was already cached (so create/run/heal/approve work without browser interaction), `bdata --version` returned `0.3.5`, Bright Data signup implicitly worked (we created collectors). The remaining step is purely observational: visit brightdata.com/cp/scrapers/browse and confirm no maintained library scraper already covers `jobs.ashbyhq.com/retell-ai` (or the Ashby platform generally). Non-blocking — we've already created our own — but should still be done for the checklist's completeness.
@@ -103,11 +110,21 @@ ScraperMan/
 
 - **Run-cli details:** `npm run scraper:run` captures bdata's stdout (JSON) and writes `runs/<ts>.json` + `runs/latest.json`. Polling progress (`Polling (attempt N/600)`) is shown to stderr. Average run takes ~60 polls (~1-2 min). If a future run hits a 600-attempt timeout that's the signal a heal is needed.
 
-- **tsconfig `include`** currently covers `scraper/`, `validator/`, `orchestrator/`, `downstream/`, `config/` — may need to broaden as real code lands in later phases. Already verified: `tsc --noEmit` passes with `scraper/run-cli.ts` in scope.
+- **Validator thresholds are deliberately loose for natural drift** — required_fields_present and url_shape both tolerate up to 10% broken records, row_count_sanity allows up to 50% drop, no_mass_duplication allows up to 50% duplication. These numbers are starting points; Phase 4 (healing orchestrator) may tune them once we see real run-to-run variation. Any future tightening must be paired with an updated fixture so `validate:test` keeps catching the intended breakages.
 
-- **`run-cli.ts` uses `process.cwd()`** for REPO_ROOT — relies on npm scripts always running with cwd = repo root. If we ever invoke it from another directory (e.g. CI step from a different repo root), paths will break. Acceptable for now, noted for Phase 6.
+- **`run-cli.ts` and `run-validate.ts` use `process.cwd()`** for REPO_ROOT — relies on npm scripts always running with cwd = repo root. If we ever invoke from another directory (e.g. CI step from a different repo root), paths will break. Acceptable for now, noted for Phase 6.
 
 ## Session Log (most recent entry first)
+
+### Session 4 — Phase 3 (validator)
+- **Closed out Phase 2 Known Issues.** Updated `config/targets.json`: real-target entry's `url` → `https://jobs.ashbyhq.com/retell-ai`, added `humanPageUrl: "https://www.retellai.com/careers"`, reworded `notes` to explain the iframe/embed pivot. Updated `config/schema.json`: `fields` is now an inline array of `{ name, required, type, description }` entries matching the **real** scraper output names — `job_title`, `location`, `application_url` (required) + `location_type`, `product_page_url` (optional). Dropped the original v1 guesses (`role_title`, `job_url`) entirely. `planned_v2_fields` left as its own separate top-level array, unchanged.
+- **Built the validator.** `validator/validate.ts` exports pure `validate(runOutput, baseline) => ValidationResult` with five rules, each appending to `diff` when violated: `non_empty_array` (absolute — the empty-scrape signature we saw in Phase 2), `required_fields_present` (>10% records missing/blank on any required field, up to 3 example records returned), `row_count_sanity` (`recordCount >= baselineCount * 0.5` — no hardcoded 31), `url_shape` (>10% `application_url`s don't start with `"http"`), `no_mass_duplication` (>50% records share an identical `job_title`). All rules tolerate natural drift (added/removed roles) — only sane bounds, no exact-match.
+- **CLI + npm scripts.** `validator/run-validate.ts` (backs `npm run validate`) loads baseline + run file (default `scraper/runs/latest.json`, overridable via `npm run validate -- <path>`), prints `PASS (n records)` on pass, full diff + exit 1 on fail. `validator/run-tests.ts` (backs `npm run validate:test`) asserts expected pass/fail + exact failing-rule name(s) per fixture, exits non-zero if any assertion wrong.
+- **Fixtures.** `validator/test-fixtures/`: `passing-real-baseline.json` (byte copy of `scraper/baseline-output.json`), `failing-empty-array.json` (`[]`), `failing-high-nulls.json` (baseline with 4/31 `job_title=null` = 12.9% > 10%, generated via a node one-liner from the real baseline — all 31 records structurally identical).
+- **Verified.** `tsc --noEmit` passes. `npm run validate -- scraper\baseline-output.json` → `PASS (31 records)`. `npm run validate:test` → all 3 fixtures produce exactly the expected outcomes (pass on passing-real-baseline; fail on `non_empty_array` only for empty-array; fail on `required_fields_present` only for high-nulls). `no_mass_duplication` correctly did NOT trip on the high-nulls fixture (4/31 share `null` title = 12.9% < 50%).
+- **PROGRESS.md.** Checked off Phase 2 + Phase 3 (pending review). Updated Key Decisions (schema now uses inline `{name,required}` + real field names; targets.json now carries the Ashby URL + humanPageUrl). Resolved the stale-target Known Issue. Added note that validator thresholds are starting points Phase 4 may tune.
+
+- **Next:** Phase 4 will build the healing orchestrator, consuming `validate()`'s `diff` array to auto-compose `bdata` heal prompts.
 
 ### Session 3 — Phase 2 (base scraper + demo page)
 - **Real scraper pivot.** Originally created `c_mt21dfrd1jpyf7wgrx` against `https://www.retellai.com/careers`; `bdata scraper run` returned an empty `jobs` array. Diagnosed (via the user's input) that retellai.com/careers is a Webflow marketing shell whose "Open Positions" section embeds the actual Ashby board in an iframe — no job data on the page itself to heal toward. Created a new collector `c_mt21unzzuq4w8c702` against `https://jobs.ashbyhq.com/retell-ai`; `bdata scraper run` returned 31 populated records with fields `job_title`, `location`, `application_url` (plus bonus `location_type`, `product_page_url`, `input`). Close to v1 schema (`role_title`/`location`/`job_url`) — Phase 3 validator will alias the differing names.

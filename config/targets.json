@@ -3,9 +3,10 @@
   "targets": [
     {
       "id": "retell",
-      "url": "https://www.retellai.com/careers",
+      "url": "https://jobs.ashbyhq.com/retell-ai",
       "type": "real",
-      "notes": "custom-built page, own domain, not a third-party ATS - primary data source, expect natural content drift over the week (roles added/removed, minor copy changes)"
+      "humanPageUrl": "https://www.retellai.com/careers",
+      "notes": "Ashby-hosted job board - the actual data source for Retell AI's open roles. Expected to drift naturally over the week (roles added/removed, minor copy changes). The humanPageUrl is the company's own marketing page (Webflow) that embeds this Ashby board client-side in an iframe; it has no server-side job data itself - that's why we scrape the Ashby board directly here instead."
     },
     {
       "id": "demo",

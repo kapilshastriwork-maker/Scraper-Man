@@ -1,13 +1,15 @@
 {
   "version": 1,
-  "fields": {
-    "role_title": { "type": "string", "description": "The advertised title of the open role, as shown on the careers page." },
-    "location": { "type": "string", "description": "The role's location string exactly as posted (may be 'Remote', a city, or 'Remote - City')." },
-    "job_url": { "type": "string", "description": "Direct URL to the individual job posting." }
-  },
-  "planned_v2_fields": {
-    "department": { "type": "string", "description": "Internal department/team the role belongs to (e.g. Engineering, Sales). Reserved for a later self-heal demo - not extracted in v1." },
-    "employment_type": { "type": "string", "description": "Full-time / Part-time / Contract / Intern. Reserved for a later self-heal demo - not extracted in v1." },
-    "date_posted": { "type": "string", "description": "Date the role was posted, as a string in the source's own format. Reserved for a later self-heal demo - not extracted in v1." }
-  }
+  "fields": [
+    { "name": "job_title", "required": true, "type": "string", "description": "The advertised title of the open role, as shown on the careers page." },
+    { "name": "location", "required": true, "type": "string", "description": "The role's location string exactly as posted (may be 'Remote', a city, or 'Remote - City')." },
+    { "name": "application_url", "required": true, "type": "string", "description": "Direct URL to the individual job posting's application form." },
+    { "name": "location_type", "required": false, "type": "string", "description": "Bonus field emitted by the scraper - Ashby's categorization (e.g. 'On-site', 'Remote', 'Applied AI')." },
+    { "name": "product_page_url", "required": false, "type": "string", "description": "Bonus field emitted by the scraper - canonical page URL for the role on Ashby." }
+  ],
+  "planned_v2_fields": [
+    { "name": "department", "type": "string", "description": "Internal department/team the role belongs to (e.g. Engineering, Sales). Reserved for a later self-heal demo - not extracted in v1." },
+    { "name": "employment_type", "type": "string", "description": "Full-time / Part-time / Contract / Intern. Reserved for a later self-heal demo - not extracted in v1." },
+    { "name": "date_posted", "type": "string", "description": "Date the role was posted, as a string in the source's own format. Reserved for a later self-heal demo - not extracted in v1." }
+  ]
 }
