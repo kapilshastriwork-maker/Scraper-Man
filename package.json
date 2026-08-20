@@ -1,15 +1,21 @@
-﻿{
+{
   "name": "startup-hiring-signal-tracker",
   "version": "0.0.1",
   "private": true,
   "description": "A self-healing scraper that tracks open roles across startup careers pages spanning three different ATS/layout families, built on Bright Data Scraper Studio.",
   "engines": { "node": ">=22.0.0" },
   "scripts": {
-    "scraper:create": "echo \"placeholder - Phase 2: create Bright Data Collector via bdata\" && exit 0",
-    "scraper:run": "echo \"placeholder - Phase 2: run Bright Data Collector via bdata\" && exit 0",
-    "scraper:heal": "echo \"placeholder - Phase 4: trigger healing orchestrator\" && exit 0",
+    "scraper:create": "tsx scraper/run-cli.ts create",
+    "scraper:run": "tsx scraper/run-cli.ts run",
+    "scraper:heal": "tsx scraper/run-cli.ts heal",
+    "scraper:approve": "tsx scraper/run-cli.ts approve",
     "validate": "echo \"placeholder - Phase 3: validate scraper output against schema\" && exit 0",
     "orchestrate": "echo \"placeholder - Phase 4: run self-healing loop\" && exit 0",
     "dev": "echo \"placeholder - Phase 5+: local dev entrypoint\" && exit 0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
   }
 }

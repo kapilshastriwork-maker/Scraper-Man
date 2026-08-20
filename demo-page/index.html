@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northwind Labs - Careers</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+  line-height: 1.5;
+}
+header.site-header {
+  padding: 2rem 1.5rem 1rem;
+  text-align: center;
+}
+header.site-header h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
+header.site-header p { margin: 0; color: #475569; }
+main { max-width: 720px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+section.open-roles > h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+.job-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+.job-title { font-weight: 600; font-size: 1.05rem; margin: 0; grid-column: 1; }
+.job-location { margin: 0; color: #64748b; font-size: 0.95rem; grid-column: 1; }
+.job-apply-link {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.job-apply-link:hover { background: #1d4ed8; }
+footer.site-footer { text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <h1>Northwind Labs</h1>
+  <p>We build infrastructure for autonomous finance teams.</p>
+</header>
+
+<main>
+  <section class="open-roles">
+    <h2>Open Roles</h2>
+
+    <article class="job-card">
+      <h3 class="job-title">Senior Backend Engineer</h3>
+      <p class="job-location">Remote (US)</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+
+    <article class="job-card">
+      <h3 class="job-title">Product Designer</h3>
+      <p class="job-location">New York, NY</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+
+    <article class="job-card">
+      <h3 class="job-title">Platform Engineer, Infrastructure</h3>
+      <p class="job-location">Remote (EMEA)</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+
+    <article class="job-card">
+      <h3 class="job-title">Founding Account Executive</h3>
+      <p class="job-location">San Francisco, CA</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+
+    <article class="job-card">
+      <h3 class="job-title">Machine Learning Engineer</h3>
+      <p class="job-location">Remote (Global)</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+
+    <article class="job-card">
+      <h3 class="job-title">Developer Advocate</h3>
+      <p class="job-location">London, UK</p>
+      <a class="job-apply-link" href="#">Apply</a>
+    </article>
+  </section>
+</main>
+
+<footer class="site-footer">
+  Northwind Labs is fictional. All roles, people, and places here are invented for scraping-demo purposes.
+</footer>
+</body>
+</html>

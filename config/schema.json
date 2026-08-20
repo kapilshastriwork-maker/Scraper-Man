@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 1,
   "fields": {
     "role_title": { "type": "string", "description": "The advertised title of the open role, as shown on the careers page." },
