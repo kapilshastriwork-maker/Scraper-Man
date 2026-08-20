@@ -10,7 +10,7 @@ Holds the **self-healing loop** (Phase 4): run the scraper (via `bdata`), valida
 - `view-audit-log.ts` — reads the JSONL audit log and prints a one-line-per-entry timeline (throwaway-simple; Phase 5 will improve it).
 - `run-tests.ts` — fixture-based tests for `composeHealPrompt`, `validate(preview)` skip behavior, and the approve vs escalate decision logic. No real `bdata` calls.
 - `state.json` — local source of truth for collector state (`lastKnownStatus`, `lastHealPreviewResult`, `lastHealPrompt`). Created by `state:seed` or by `orchestrate()` itself after a heal. `orchestrate()` treats a missing `state.json` as a clean state (no pending heal) — it does NOT auto-scan for one.
-- `audit-log.jsonl` — append-only JSONL of every orchestrate run: one JSON object per line. Entry shape: `{ timestamp, trigger, validationResultSummary, healPromptSent, collectorStateBefore, collectorStateAfter, previewResultSummary (first 2 records), decision, reasoning }`.
+- `audit-log.jsonl` — append-only JSONL of every orchestrate run: one JSON object per line. Entry shape: `{ timestamp, trigger, validationResultSummary, healPromptSent, collectorStateBefore, collectorStateAfter, previewResultSummary (first 2 records), decision, reasoning, syncResult }`. The `syncResult` field is `{ added, updated, closedOut } | null` — non-null on the two full-validate PASS paths (branch (c) `healthy_run_no_action` + branch (e) `approved`), null on both escalation branches.
 - `recon/heal-raw-output-*.txt` — the raw captured output of the Phase 4 recon heal call (kept as a record; not parsed at orchestrate runtime after the design fix).
 
 ## npm scripts

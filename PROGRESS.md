@@ -1,7 +1,7 @@
 # Project Progress Log
 
-**Status:** Phase 4 done (pending review)
-**Last updated:** 2026-08-22 — Phase 4
+**Status:** Phase 5 done (pending review)
+**Last updated:** 2026-08-22 — Phase 5
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -10,18 +10,18 @@
 - Anything decided that future sessions must respect (naming, schema, target URLs, tech choices, tradeoffs) goes under Key Decisions, not just buried in the log.
 
 ## Current Phase
-Phase 3 of 7 — Validator (done, pending review)
+Phase 5 of 7 — Downstream + audit timeline (done, pending review)
 
 ## Phase Checklist
 - [x] Phase 1 — Foundation & target lock-in
 - [x] Phase 2 — Build the base scraper in Scraper Studio + build & deploy the demo page's actual HTML content to GitHub Pages (not just a placeholder stub) *(scraper created + demo page built; GH Pages deployment deliberately deferred — see Known Issues)*
 - [x] Phase 3 — Validator *(done, pending review)*
-- [ ] Phase 4 — Healing orchestrator
-- [ ] Phase 5 — Downstream + audit timeline
+- [x] Phase 4 — Healing orchestrator *(done, pending review)*
+- [x] Phase 5 — Downstream + audit timeline *(done, pending review)*
 - [ ] Phase 6 — Unattended CI loop + scale
 - [ ] Phase 7 — Controlled-break demo, polish, submit
 
-> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes.
+> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes. Phase 4 done pending review: full healing orchestrator with preview/full validation split + state/audit-log disagreement fix landed (see Session 6). Phase 5 done pending review: downstream SQLite storage (`downstream/db.ts`) wired into the orchestrator on the two full-validate PASS paths; two static HTML pages (`timeline.html` + `jobs.html`) committed as deployable snapshots.
 
 ## Key Decisions
 
@@ -66,6 +66,17 @@ Phase 3 of 7 — Validator (done, pending review)
   - **Branch (b) vs (c) run-file count invariant (per Phase 4 user correction #3):** branch (b)→(e) produces ONE new run file (the post-approve confirmation); branch (c)→(e) produces TWO (the initial break-detecting run + the post-approve confirmation). Documented inline in `orchestrate.ts` so future sessions don't misread a "missing run file" as a bug.
   - **Live collector state after Phase 4 step 9:** `c_mt21unzzuq4w8c702` is in `done` state with the `department`-field heal template applied. The next scrape of `https://jobs.ashbyhq.com/retell-ai` will reflect that healed template — however, the auxiliary finding (see Session 6 entry) is that the Ashby page itself doesn't expose `department` per role, so the healed template's preview had it synthesized but the production scrape may not include it. This is documented as known behavior, not a bug.
 
+- **Downstream storage (Phase 5):**
+  - **SQLite via `better-sqlite3`.** Chosen for synchronous API (no callback complexity inside the orchestrator's already-async flow) and zero-runtime-dep footprint. Installed cleanly on the dev machine with native build; if a future install fails on another machine, swap is a matter of replacing `downstream/db.ts` only (the public API — `initDb`, `syncJobs`, `getActiveJobs` — is the contract).
+  - **`jobs` table schema.** `application_url TEXT PRIMARY KEY` (stable per-role UUID URL from Ashby is the natural key), `job_title`, `location`, `location_type`, `product_page_url`, `first_seen_at`, `last_seen_at`, `is_active INTEGER (1/0)`, `department TEXT NULL`. `department` is reserved for the planned v2 schema extension (per `config/schema.json`'s `planned_v2_fields`) — NULL today because the live Ashby page doesn't expose per-role department; adding it later requires no destructive migration.
+  - **`syncJobs` semantics: upsert + closeout, never delete.** New URL in this run → INSERT with `first_seen_at = last_seen_at = runTimestamp, is_active = 1` (counted as `added`). Existing URL still in this run → UPDATE non-key fields + `last_seen_at`, set `is_active = 1` (counted as `updated`); `first_seen_at` preserved across updates. URL in DB but NOT in this run → `is_active = 0` (counted as `closedOut`); the row is deliberately NEVER deleted — a job disappearing is real signal (role filled or pulled), not an error, and we keep its first/last-seen history for the audit timeline. Single transaction per `syncJobs` call.
+  - **Gitignore policy: transient cache vs deployable product.** `downstream/data.db` is **gitignored** (regenerable from `scraper/runs/*.json`; would cause merge conflicts if multiple machines ran the orchestrator). `downstream/timeline.html` and `downstream/jobs.html` are **committed** — they're deployable snapshots meant to be opened by a judge with zero setup. Regenerate-and-recommit is expected behavior over the coming phases, not a one-time thing.
+  - **Orchestrator wiring: sync on PASS, never on escalation.** Extended `Services` with required `syncToDownstream(records, runTimestamp): Promise<{ added, updated, closedOut }>` — required (no optionals), matching the existing DI pattern for `runScraper`/`healScraper`/`approveScraper`. Called at exactly two sites: branch (c) full-validate PASS → `healthy_run_no_action`, and branch (e) `finalResult.pass === true` → `approved`. NOT called on `escalated_final_validate_failed` or `escalated_preview_failed` — unvalidated data never reaches storage.
+  - **`syncResult` in the audit shape.** `AuditEntry.syncResult: { added, updated, closedOut } | null` — non-null on the two full-validate PASS paths, null on both escalation branches. Backward-compatible: legacy entries without `syncResult` are tolerated by `view-audit-log.ts` (no `| sync:` line printed) and `build-timeline.ts` ("storage: not synced" or the legacy note).
+  - **Full-validate-as-gate CLI.** `npm run downstream:sync [-- <runPath>]` loads a run file (default `scraper/runs/latest.json`), full-validates against the baseline, only opens the DB on `PASS`. On `FAIL` prints the diff and exits non-zero WITHOUT touching the DB. Mirrors `validator/run-validate.ts`'s argv convention — same shape, different downstream action.
+  - **Two static HTML pages (no framework, no build step, double-click runnable).** `timeline.html` (built by `npm run timeline:build` from `orchestrator/audit-log.jsonl`): reverse-chronological list of audit entries, inline CSS, each entry shows timestamp/trigger/decision/one-line reasoning/sync counts. `jobs.html` (built by `npm run jobs:build` from `is_active=1` rows in the DB): public-facing "who's hiring" list with title/location/apply link — the actual downstream product the Collector ID's data is "for."
+  - **Testability via DI, temp DBs, no real-DB touching in tests.** `syncToDownstream` is DI'd like the other 3 service methods; existing orchestrator test fakes were updated to implement it (record calls + return a `{ added, updated, closedOut }` summary). `downstream/run-tests.ts` uses a fresh temp DB per test via `mkdtempSync(join(tmpdir(), "downstream-test-"))` — NEVER touches the real `downstream/data.db`. 5 assertions: initDb creates file+table; first sync all-new; idempotent second sync; third sync drops-one/adds-one with vanished row persisting at `is_active=0` (not deleted); `getActiveJobs` excludes closed rows.
+
 ## What Exists Right Now
 
 ```
@@ -77,8 +88,8 @@ ScraperMan/
 ├── README.md            # project pitch + progress + architecture
 ├── SETUP_CHECKLIST.md   # 5 human-only setup checkboxes
 ├── PROGRESS.md          # THIS FILE — cross-session project memory
-├── package.json         # name, engines.node>=22, real scraper:* scripts, validate/orchestrate/dev still no-ops
-├── package-lock.json    # lockfile (tracked) — added Phase 2 with tsx + @types/node
+├── package.json         # scripts: scraper:*, validate, validate:test, orchestrate, orchestrate:test, downstream:{sync,test}, timeline:build, jobs:build, audit:view, state:seed, dev (placeholder)
+├── package-lock.json    # lockfile (tracked) — tsx + @types/node + better-sqlite3 + @types/better-sqlite3
 ├── tsconfig.json        # TS strict, ES2022/NodeNext
 ├── node_modules/        # gitignored
 ├── config/
@@ -101,11 +112,28 @@ ScraperMan/
 │       ├── passing-real-baseline.json  # exact copy of baseline (expect PASS)
 │       ├── failing-empty-array.json    # [] (expect FAIL on non_empty_array only)
 │       └── failing-high-nulls.json     # baseline with 4/31 job_title=null (expect FAIL on required_fields_present only)
-├── orchestrator/       # Phase 4 — healing orchestrator (recon done, logic pending)
-│   ├── README.md       # (stub — to be rewritten in Part B)
+├── orchestrator/       # Phase 4 — healing orchestrator
+│   ├── README.md       # orchestrator flow, branches (a)–(g), syncResult schema
+│   ├── orchestrate.ts  # orchestrate() main flow + DI seam (Services: run/heal/approve/syncToDownstream)
+│   ├── compose-heal-prompt.ts # ValidationResult.diff → plain-language heal prompt
+│   ├── seed-state-from-recon.ts # CLI: npm run state:seed -- <reconFile> <stateFile> [--force]
+│   ├── view-audit-log.ts # CLI: npm run audit:view — one-line-per-entry print
+│   ├── state.json      # local source of truth for collector state (lastKnownStatus, etc.)
+│   ├── audit-log.jsonl # append-only audit log; entry has syncResult since Phase 5
+│   ├── run-tests.ts    # CLI: npm run orchestrate:test — 5 fixtures (no real bdata calls)
 │   └── recon/
-│       └── heal-raw-output-2026-08-20T22-10-15-615Z.txt  # raw captured heal output, unmodified
-├── downstream/         # (README stub) Phase 5
+│       ├── heal-raw-output-2026-08-20T22-10-15-615Z.txt  # raw captured heal output
+│       └── post-fix-correction.json  # SYNTHETIC approve output used to seed state.json after fix
+├── downstream/         # Phase 5 — SQLite storage + audit timeline
+│   ├── README.md        # schema, gitignore rationale, rebuild instructions
+│   ├── db.ts            # initDb, syncJobs (upsert + closeout in single txn), getActiveJobs
+│   ├── run-sync.ts      # CLI: npm run downstream:sync [-- <runPath>] — validates then syncs
+│   ├── run-tests.ts     # CLI: npm run downstream:test — temp DB per test
+│   ├── build-timeline.ts # CLI: npm run timeline:build — renders timeline.html from audit-log.jsonl
+│   ├── build-jobs-page.ts # CLI: npm run jobs:build — renders jobs.html from data.db
+│   ├── timeline.html    # committed deployable snapshot (regenerable)
+│   ├── jobs.html        # committed deployable snapshot (regenerable)
+│   └── data.db          # gitignored — SQLite DB, regenerable from scraper/runs/
 ├── demo-page/          # static fake careers page (Northwind Labs) — built but NOT deployed
 │   ├── index.html      # 6 fictional roles, semantic classes (job-card / job-title / job-location / job-apply-link)
 │   └── README.md       # Phase 7 controlled-break demo purpose
@@ -128,6 +156,18 @@ ScraperMan/
 - **`run-cli.ts` and `run-validate.ts` use `process.cwd()`** for REPO_ROOT — relies on npm scripts always running with cwd = repo root. If we ever invoke from another directory (e.g. CI step from a different repo root), paths will break. Acceptable for now, noted for Phase 6.
 
 ## Session Log (most recent entry first)
+
+### Session 7 — Phase 5 (downstream SQLite storage + audit timeline)
+- **Storage layer.** Added `better-sqlite3` (^13.x.x — installed cleanly, native build succeeded on the dev machine) + `@types/better-sqlite3` (^9.x.x). Created `downstream/db.ts` exporting `initDb(dbPath)`, `syncJobs(dbPath, records, runTimestamp) -> { added, updated, closedOut }`, and `getActiveJobs(dbPath)`. `syncJobs` runs as a single transaction: INSERT new records with `first_seen_at = last_seen_at = runTimestamp, is_active = 1`; on conflict UPDATE non-key fields + `last_seen_at`, set `is_active = 1` (preserve `first_seen_at`); rows whose `application_url` is NOT in this run's records get `is_active` flipped to 0 (NEVER deleted — vanishing is real signal). Schema: `application_url TEXT PRIMARY KEY, job_title, location, location_type, product_page_url, first_seen_at, last_seen_at, is_active INTEGER, department TEXT NULL` — `department` is reserved for the `planned_v2_fields` extension and NULL in v1 (real Ashby page doesn't expose per-role department; see Session 6 preview-vs-production drift).
+- **Gitignore policy: transient cache vs deployable product.** `downstream/data.db` is gitignored (regenerable from `scraper/runs/*.json`; would cause merge conflicts). `downstream/timeline.html` and `downstream/jobs.html` ARE committed — they're deployable snapshots meant to be opened by a judge/reviewer with zero setup. Regenerate-and-recommit is expected behavior over the coming phases.
+- **Orchestrator wiring.** Extended `Services` with required `syncToDownstream(records, runTimestamp): Promise<{ added, updated, closedOut }>` — required (no optionals), matching the existing DI pattern for the other 3 service methods. Split `buildRealServices` return type into `BdataServices = Pick<Services, "runScraper" | "healScraper" | "approveScraper">` so the bdata-touching helper stays separate from the db-touching one; `syncToDownstream` is assembled inside `orchestrate()` itself, closing over the per-call `dbPath` opt. Called at exactly two sites: branch (c) full-validate PASS → `healthy_run_no_action`, and branch (e) `finalResult.pass === true` → `approved`. NOT called on `escalated_final_validate_failed` or `escalated_preview_failed` — unvalidated data never reaches storage. All 3 existing test fakes in `orchestrator/run-tests.ts` were updated to implement `syncToDownstream` (record calls + return the summary); new assertions: approved path → sync called once + `auditEntry.syncResult` non-null with `added > 0`; escalated_preview_failed → sync NOT called + `syncResult` is null; branch (b)→(e) approved → sync called once.
+- **Audit shape extended.** `AuditEntry.syncResult: { added, updated, closedOut } | null` — non-null on the two sync paths, null on both escalation branches. `view-audit-log.ts` updated to print `| sync: +N ~N -N` when present; backward-compatible with legacy entries (the existing Phase 4 step-9 entry has no `syncResult` and renders without the line).
+- **Full-validate-as-gate CLI.** `downstream/run-sync.ts` (# `npm run downstream:sync [-- <runPath>]`) loads a run file (default `scraper/runs/latest.json`), full-validates against baseline, only opens the DB and calls `syncJobs` on `PASS`. On `FAIL`, prints the diff and exits non-zero WITHOUT touching the DB. Smoke-tested end-to-end against the real Phase 4 step-9 run file: `SYNC OK (31 records) -> downstream/data.db, added: 31, updated: 0, closedOut: 0`.
+- **Two static HTML pages (no framework, no build step, double-click runnable).** `build-timeline.ts` (# `npm run timeline:build`) renders `timeline.html` from `orchestrator/audit-log.jsonl`: reverse-chronological `<ol>`, inline CSS with dark-mode support, each entry shows timestamp / trigger / decision / one-line reasoning (truncated ~200 chars with full text in `title` attr) / sync counts if non-null. `build-jobs-page.ts` (# `npm run jobs:build`) renders `jobs.html` from `is_active=1` rows in the DB: a public-facing "who's hiring" list — title, location, apply link. This is the actual downstream product the Collector ID's data is "for." Both pages regenerated and committed against real Phase 4 data (1 audit entry in `timeline.html`, 31 active roles in `jobs.html`).
+- **Tests + npm scripts.** `downstream/run-tests.ts` (# `npm run downstream:test`) — 5 assertions, fresh temp DB per test via `mkdtempSync(join(tmpdir(), "downstream-test-"))` (NEVER touches the real `downstream/data.db`): (1) initDb creates file+table; (2) first sync 10 records → added=10; (3) second sync same data → updated=10, `last_seen_at` advances, `first_seen_at` preserved; (4) third sync drops one URL + adds one → closedOut=1, added=1, updated=9, vanished row persists with `is_active=0` (NOT deleted), total rows = 11; (5) `getActiveJobs` excludes closed rows. All 3 test CLIs PASS: `validate:test` (5), `orchestrate:test` (5, with new sync assertions), `downstream:test` (5). `tsc --noEmit` clean. Added 5 new npm scripts: `downstream:sync`, `downstream:test`, `timeline:build`, `jobs:build`, and `orchestrate:test` (the orchestrator tests previously had no backing npm script — only runnable via `tsx` directly).
+- **PROGRESS.md.** Header status → `Phase 5 done (pending review)`. Tick Phase 4 + Phase 5 checklist boxes. Current Phase line → Phase 5 of 7. Added 8 Phase 5 Key Decisions bullets (storage schema, syncJobs semantics, gitignore vs commit policy, orchestrator wiring, audit shape extension, full-validate-as-gate, two static HTML pages, testability). Updated "What Exists Right Now" tree to show `downstream/` contents, the real orchestrator files, and the real `package.json` script list. This Session 7 entry.
+
+- **Next:** Phase 6 will wire the whole loop into a GitHub Actions cron — this needs a GitHub remote, which was deliberately deferred since Phase 1.
 
 ### Session 6 — Phase 4 (orchestrator build + state/audit disagreement fix)
 - **Built the healing orchestrator.** `orchestrator/orchestrate.ts` implements the full `orchestrate()` flow: branch (a)/(b) reads `state.json` and short-circuits to the preview decision phase when a pending heal is already cached (`found_existing_pending_heal` trigger); branch (c) runs the scraper via `runScraper`, full-validates against `scraper/baseline-output.json`, and on failure composes a heal prompt (`compose-heal-prompt.ts`), triggers a real `bdata scraper heal`, persists the awaiting_approval preview to `state.json`, then falls through to `previewDecisionPhase`. The shared `previewDecisionPhase` (branches d/e/f) preview-validates the cached `preview_result` before approving: preview pass → `bdata scraper approve` + fresh scrape + final full-validate (decision `approved`, or `escalated_final_validate_failed` if the final scrape fails); preview fail → decision `escalated_preview_failed`, collector left intentionally in `awaiting_approval`. No auto-retry on the rare "preview passed but final full-validate failed" path — that's a real human escalation. State, audit log, and services are dependency-injected (`orchestrate(opts?: { services?, auditPath?, statePath?, baselinePath? })`), so all 5 orchestrator tests in `orchestrator/run-tests.ts` pass without any real bdata calls.

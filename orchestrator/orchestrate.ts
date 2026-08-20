@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validate, type ValidationResult } from "../validator/validate.js";
 import { composeHealPrompt } from "./compose-heal-prompt.js";
+import { syncJobs, type SyncSummary } from "../downstream/db.js";
 
 const REPO_ROOT = process.cwd();
 const BDATA = "npx -p @brightdata/cli bdata";
@@ -31,6 +32,10 @@ export interface Services {
   runScraper(): Promise<unknown>;
   healScraper(prompt: string): Promise<HealResult>;
   approveScraper(): Promise<void>;
+  // Called automatically on any full-validate PASS — never on escalation branches
+  // (unvalidated data never reaches downstream storage). Returns the upsert/closeout
+  // counts so the audit entry can record exactly what changed in storage.
+  syncToDownstream(records: unknown[], runTimestamp: string): Promise<SyncSummary>;
 }
 
 export type OrchestrateTrigger =
@@ -49,6 +54,10 @@ export interface AuditEntry {
   previewResultSummary: unknown[];
   decision: string;
   reasoning: string;
+  // null when sync wasn't applicable (escalation branches — unvalidated data);
+  // populated with the upsert/closeout summary on the two full-validate PASS paths:
+  // branch (c) healthy_run_no_action + branch (e) approved.
+  syncResult: SyncSummary | null;
 }
 
 export interface State {
@@ -71,6 +80,7 @@ interface OrchestrateOpts {
   auditPath?: string;
   statePath?: string;
   baselinePath?: string;
+  dbPath?: string;
 }
 
 // ---------- Config / file helpers ----------
@@ -116,8 +126,14 @@ function summarizePreview(preview: unknown): unknown[] {
 }
 
 // ---------- Real services (production) ----------
+//
+// buildRealServices returns only the three bdata-touching service methods;
+// `syncToDownstream` (DB-concern, not bdata-concern) is assembled inside
+// orchestrate() itself so it can close over the per-call `dbPath` opt.
 
-function buildRealServices(cfg: ScraperConfig): Services {
+type BdataServices = Pick<Services, "runScraper" | "healScraper" | "approveScraper">;
+
+function buildRealServices(cfg: ScraperConfig): BdataServices {
   return {
     async runScraper(): Promise<unknown> {
       // Invoke `npm run scraper:run` so timestamped + latest.json artifacts are
@@ -148,6 +164,7 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
   const auditPath = opts.auditPath ?? resolve(REPO_ROOT, "orchestrator", "audit-log.jsonl");
   const statePath = opts.statePath ?? resolve(REPO_ROOT, "orchestrator", "state.json");
   const baselinePath = opts.baselinePath ?? resolve(REPO_ROOT, "scraper", "baseline-output.json");
+  const dbPath = opts.dbPath ?? resolve(REPO_ROOT, "downstream", "data.db");
 
   const cfg = loadConfig();
   const real = buildRealServices(cfg);
@@ -155,6 +172,8 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
     runScraper: opts.services?.runScraper ?? real.runScraper,
     healScraper: opts.services?.healScraper ?? real.healScraper,
     approveScraper: opts.services?.approveScraper ?? real.approveScraper,
+    syncToDownstream: opts.services?.syncToDownstream
+      ?? (async (records: unknown[], runTimestamp: string) => syncJobs(dbPath, records, runTimestamp)),
   };
 
   const baseline = loadBaseline(baselinePath);
@@ -196,6 +215,13 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
   const fullResult = validate(runOutput, baseline, "full");
 
   if (fullResult.pass) {
+    // Full-validate PASS → sync to downstream storage. The validate() contract
+    // guarantees runOutput is a non-empty array here (the non_empty_array rule
+    // would have failed otherwise), so the cast is safe. Cast is the cleanest
+    // way to satisfy syncToDownstream's `unknown[]` signature without making
+    // validate()'s return type parameterised on the input shape.
+    const records = (Array.isArray(runOutput) ? runOutput : []) as unknown[];
+    const syncResult = await services.syncToDownstream(records, new Date().toISOString());
     const entry: AuditEntry = {
       timestamp: new Date().toISOString(),
       trigger: "healthy_run_no_action",
@@ -205,7 +231,8 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
       collectorStateAfter: collectorStateBefore,
       previewResultSummary: [],
       decision: "no_action",
-      reasoning: "Run validated cleanly against baseline. No heal needed.",
+      reasoning: "Run validated cleanly against baseline. No heal needed. Synced to downstream storage.",
+      syncResult,
     };
     appendAuditEntry(auditPath, entry);
     return { trigger: "healthy_run_no_action", decision: "no_action", reasoning: entry.reasoning, auditEntry: entry };
@@ -267,13 +294,20 @@ async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<Orchestrate
     let decision: OrchestrateOutcome["decision"];
     let reasoning: string;
     let collectorStateAfter = "done";
+    // syncResult: only populated when finalResult.pass === true. On
+    // escalated_final_validate_failed the post-approve scrape did NOT validate,
+    // so the (unvalidated) data must not reach downstream storage — syncResult
+    // stays null and the audit entry records that sync was deliberately skipped.
+    let syncResult: SyncSummary | null = null;
 
     if (finalResult.pass) {
       decision = "approved";
-      reasoning = "Preview passed and post-approve fresh scrape validated cleanly. Heal confirmed.";
+      reasoning = "Preview passed and post-approve fresh scrape validated cleanly. Heal confirmed. Synced to downstream storage.";
+      const records = (Array.isArray(freshOutput) ? freshOutput : []) as unknown[];
+      syncResult = await args.services.syncToDownstream(records, new Date().toISOString());
     } else {
       decision = "escalated_final_validate_failed";
-      reasoning = `Preview passed and approve succeeded, but the post-approve fresh scrape FAILED full-validation: ${summarizeValidation(finalResult)}. Left as-is for human inspection (no auto-retry).`;
+      reasoning = `Preview passed and approve succeeded, but the post-approve fresh scrape FAILED full-validation: ${summarizeValidation(finalResult)}. Left as-is for human inspection (no auto-retry). Unvalidated data NOT synced to storage.`;
     }
 
     // Persist the post-approve state: the approve call genuinely completed (the
@@ -300,6 +334,7 @@ async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<Orchestrate
       previewResultSummary: args.previewResultSummary,
       decision,
       reasoning,
+      syncResult,
     };
     appendAuditEntry(args.auditPath, entry);
     return { trigger: args.trigger, decision, reasoning, auditEntry: entry };
@@ -319,7 +354,8 @@ async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<Orchestrate
     collectorStateAfter: "awaiting_approval",
     previewResultSummary: args.previewResultSummary,
     decision: "escalated_preview_failed",
-    reasoning: `Preview validation FAILED: ${summarizeValidation(previewResult)}. Intentionally NOT approved or rejected - collector left in awaiting_approval for human inspection in the dashboard.`,
+    reasoning: `Preview validation FAILED: ${summarizeValidation(previewResult)}. Intentionally NOT approved or rejected - collector left in awaiting_approval for human inspection in the dashboard. Unvalidated data NOT synced to storage.`,
+    syncResult: null,
   };
   appendAuditEntry(args.auditPath, entry);
   return { trigger: entry.trigger, decision: "escalated_preview_failed", reasoning: entry.reasoning, auditEntry: entry };

@@ -2,3 +2,7 @@ node_modules
 .env
 dist
 *.log
+downstream/data.db
+downstream/data.db-shm
+downstream/data.db-wal
+

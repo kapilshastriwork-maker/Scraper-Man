@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Open Roles — Hiring Signal Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #fafaf9; --card: #ffffff; --ink: #18181b; --muted: #71717a;
+      --line: #e4e4e7; --hover: #f4f4f5; --accent: #2563eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#09090b; --card:#18181b; --ink:#fafafa; --muted:#a1a1aa; --line:#27272a; --hover:#27272a; --accent:#60a5fa; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--ink); margin: 0; padding: 32px 16px 64px;
+    }
+    header { max-width: 760px; margin: 0 auto 24px; }
+    h1 { font-size: 26px; margin: 0 0 6px; }
+    .subtitle { color: var(--muted); font-size: 13px; }
+    ul { list-style: none; max-width: 760px; margin: 0 auto; padding: 0; }
+    .job {
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 18px 20px; margin-bottom: 12px; transition: background .12s;
+      display: grid; grid-template-columns: 1fr auto; grid-template-areas:
+        "title title"
+        "location apply";
+      align-items: center;
+    }
+    .job:hover { background: var(--hover); }
+    .job-title {
+      grid-area: title; font-size: 17px; font-weight: 600; color: var(--ink);
+      text-decoration: none; margin-bottom: 4px;
+    }
+    .job-title:hover { color: var(--accent); }
+    .location { grid-area: location; color: var(--muted); font-size: 13px; }
+    .location.muted { font-style: italic; opacity: .7; }
+    .job-apply-link {
+      grid-area: apply; background: var(--accent); color: white; padding: 8px 14px;
+      border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;
+      white-space: nowrap; transition: opacity .12s;
+    }
+    .job-apply-link:hover { opacity: .88; }
+    .empty { text-align: center; color: var(--muted); padding: 64px 0; font-size: 14px; }
+    footer { max-width: 760px; margin: 24px auto 0; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Open Roles</h1>
+    <div class="subtitle">31 active roles · auto-generated from validated scrape · data source: <code>jobs.ashbyhq.com/retell-ai</code></div>
+  </header>
+  <ul>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/0a2439c0-5caf-4e79-89ae-c916e460b6d0">Senior Product Manager</a>
+      <div class="location">San Francisco Bay Area · Product</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/0a2439c0-5caf-4e79-89ae-c916e460b6d0/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/12c345f7-be0d-44bb-b78c-47c98c94bc86">Founding Product Marketer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/12c345f7-be0d-44bb-b78c-47c98c94bc86/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/1fcd6e82-2a31-4e2f-abcf-be069ebb6e8c">Applied AI Engineer (Customer Facing)</a>
+      <div class="location">San Francisco Bay Area; United States · Technical Success</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/1fcd6e82-2a31-4e2f-abcf-be069ebb6e8c/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/21cf0117-6b44-40df-96ea-0fb2d1d0892f">Founders Initiatives, AI Agents</a>
+      <div class="location">San Francisco Bay Area · Founders Initiatives</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/21cf0117-6b44-40df-96ea-0fb2d1d0892f/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/26bbe240-4f9f-4414-8807-ee58270726d8">Enterprise Account Executive</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/26bbe240-4f9f-4414-8807-ee58270726d8/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/26e3aa9d-f22d-4870-8db5-bb488c207559">Senior Software Engineer, Frontend</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/26e3aa9d-f22d-4870-8db5-bb488c207559/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/2e3f3930-0949-4b86-8ed1-7f5d9e068c87">Internal Deployed Engineer</a>
+      <div class="location">San Francisco Bay Area · Founders Initiatives</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/2e3f3930-0949-4b86-8ed1-7f5d9e068c87/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/37429bf6-1b7f-477d-9b1d-f291e73ca2cb">Sales Development Representative (Inbound)</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/37429bf6-1b7f-477d-9b1d-f291e73ca2cb/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/3e4fa860-4673-49bf-b577-57e73b6292fe">Senior Software Engineer, Backend</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/3e4fa860-4673-49bf-b577-57e73b6292fe/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/42680778-ec20-4fb0-9057-3b1f35128a64">Design Engineer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/42680778-ec20-4fb0-9057-3b1f35128a64/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/46400d61-feca-45f9-9000-563b8994f60f">Software Engineer, Founders Initiatives</a>
+      <div class="location">San Francisco Bay Area · Founders Initiatives</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/46400d61-feca-45f9-9000-563b8994f60f/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/5652ab47-6c89-4889-a507-7a3a943c3669">Senior Forward Deployed Engineer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/5652ab47-6c89-4889-a507-7a3a943c3669/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/65851a57-7e52-451a-816e-44cbf06abfab">Founding Content Marketing/Storytelling</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/65851a57-7e52-451a-816e-44cbf06abfab/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/6ae071ab-8b07-4e8f-871a-04df97484f67">Customer Success Engineer (Contract)</a>
+      <div class="location">Remote; Argentina; Brazil; India; Philippines; Poland; Romania; Serbia; South Africa; Ukraine · Remote</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/6ae071ab-8b07-4e8f-871a-04df97484f67/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/72dcc20d-0f0e-4639-9b7e-1806327acd97">Deployment Strategist</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/72dcc20d-0f0e-4639-9b7e-1806327acd97/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/7961d60d-cadd-45af-9635-6efaeb04a14d">Founders Initiatives, Technical Ex-Founders</a>
+      <div class="location">San Francisco Bay Area · Founders Initiatives</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/7961d60d-cadd-45af-9635-6efaeb04a14d/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/7a614b87-2dd8-4723-ae79-7cdca82aac73">Senior Forward Deployed Engineer (Mandarin Fluency Required)</a>
+      <div class="location">San Francisco Bay Area · Applied AI</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/7a614b87-2dd8-4723-ae79-7cdca82aac73/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/7dbe5404-e08c-4c62-99dc-ef050534d029">Research Scientist - Audio</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/7dbe5404-e08c-4c62-99dc-ef050534d029/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/8b34f37b-345c-4e97-8a41-3a34b4d8d306">Senior Agent Product Manager</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/8b34f37b-345c-4e97-8a41-3a34b4d8d306/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/91c08ebb-c24e-4a30-9614-00991b1f8459">Senior Language Engineer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/91c08ebb-c24e-4a30-9614-00991b1f8459/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/9b165c15-aa78-49a7-a755-8c2379fd5416">Senior Product Designer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/9b165c15-aa78-49a7-a755-8c2379fd5416/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/b0d780eb-df25-49d0-859a-915de204a2f2">Research Scientist - LLM</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/b0d780eb-df25-49d0-859a-915de204a2f2/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/b3f5abf4-e92a-4cdb-9358-d0d01e5e2205">Founding Strategic Partnerships, Cloud &amp; Alliances</a>
+      <div class="location">San Francisco Bay Area · Partnerships</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/b3f5abf4-e92a-4cdb-9358-d0d01e5e2205/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/b408ee8c-69af-4be3-a4a3-12ed5766fe1f">Staff Engineer, Platform &amp; Systems</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/b408ee8c-69af-4be3-a4a3-12ed5766fe1f/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/b65e7015-f4fc-4599-9c08-cdf2a1700416">Senior Brand Designer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/b65e7015-f4fc-4599-9c08-cdf2a1700416/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/dc995420-9909-4867-83f4-0816fe758a6f">Senior Software Engineer, Full Stack</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/dc995420-9909-4867-83f4-0816fe758a6f/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/dcc921b7-fccc-459a-93c2-10adb4aa147a">Senior Machine Learning Engineer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/dcc921b7-fccc-459a-93c2-10adb4aa147a/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/e28a97ce-44a1-4f87-a8a9-3421b5452b66">A Call for Content Creators</a>
+      <div class="location">Remote · Remote</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/e28a97ce-44a1-4f87-a8a9-3421b5452b66/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/e6b26f71-d747-4f1d-8756-e6cf91ee1e50">Senior Forward Deployed Engineer (Spanish Fluency Required)</a>
+      <div class="location">San Francisco Bay Area · Applied AI</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/e6b26f71-d747-4f1d-8756-e6cf91ee1e50/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/ea775189-0496-43d8-a386-df8148265463">Software Engineer (New Grad)</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/ea775189-0496-43d8-a386-df8148265463/application">Apply →</a>
+    </li>
+    <li class="job">
+      <a class="job-title" href="https://jobs.ashbyhq.com/retell-ai/f42bd206-6764-4eca-ae9d-127829238a8b">Founding Sales Engineer</a>
+      <div class="location">San Francisco Bay Area · On-site</div>
+      <a class="job-apply-link" href="https://jobs.ashbyhq.com/retell-ai/f42bd206-6764-4eca-ae9d-127829238a8b/application">Apply →</a>
+    </li>
+  </ul>
+  <footer>
+    Generated by <code>npm run jobs:build</code> from <code>downstream/data.db</code> (only <code>is_active = 1</code> rows).
+    Regenerate this file after every scrape to keep the list current.
+  </footer>
+</body>
+</html>

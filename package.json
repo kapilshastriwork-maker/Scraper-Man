@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "A self-healing scraper that tracks open roles across startup careers pages spanning three different ATS/layout families, built on Bright Data Scraper Studio.",
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "scraper:create": "tsx scraper/run-cli.ts create",
     "scraper:run": "tsx scraper/run-cli.ts run",
@@ -13,13 +15,22 @@
     "validate": "tsx validator/run-validate.ts",
     "validate:test": "tsx validator/run-tests.ts",
     "orchestrate": "tsx orchestrator/orchestrate.ts",
+    "orchestrate:test": "tsx orchestrator/run-tests.ts",
     "state:seed": "tsx orchestrator/seed-state-from-recon.ts",
     "audit:view": "tsx orchestrator/view-audit-log.ts",
-    "dev": "echo \"placeholder - Phase 5+: local dev entrypoint\" && exit 0"
+    "downstream:sync": "tsx downstream/run-sync.ts",
+    "downstream:test": "tsx downstream/run-tests.ts",
+    "timeline:build": "tsx downstream/build-timeline.ts",
+    "jobs:build": "tsx downstream/build-jobs-page.ts",
+    "dev": "echo \"placeholder - Phase 6+: local dev entrypoint\" && exit 0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
   }
 }

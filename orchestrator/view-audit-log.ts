@@ -14,6 +14,7 @@ interface AuditEntry {
   previewResultSummary: unknown[];
   decision: string;
   reasoning: string;
+  syncResult?: { added: number; updated: number; closedOut: number } | null;
 }
 
 function main(): void {
@@ -38,7 +39,10 @@ function main(): void {
       continue;
     }
     const reasoning = entry.reasoning.length > 140 ? entry.reasoning.slice(0, 137) + "..." : entry.reasoning;
-    console.log(`${entry.timestamp} | ${entry.trigger} | ${entry.decision} | ${reasoning}`);
+    const syncLine = entry.syncResult
+      ? ` | sync: +${entry.syncResult.added} ~${entry.syncResult.updated} -${entry.syncResult.closedOut}`
+      : "";
+    console.log(`${entry.timestamp} | ${entry.trigger} | ${entry.decision} | ${reasoning}${syncLine}`);
   }
 }
 

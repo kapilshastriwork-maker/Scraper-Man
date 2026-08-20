@@ -130,21 +130,32 @@ async function testDecisionApprovesOnPassingPreview(): Promise<TestResult> {
     approveScraper: async () => {
       calls.push("approveScraper");
     },
+    syncToDownstream: async (records: unknown[], _runTimestamp: string) => {
+      calls.push(`syncToDownstream:${records.length}`);
+      return { added: records.length, updated: 0, closedOut: 0 };
+    },
   };
 
   const outcome = await orchestrate({ services, auditPath, statePath, baselinePath });
   const approved = calls.includes("approveScraper");
   const runCalls = calls.filter((c) => c === "runScraper").length;
   const healCalls = calls.filter((c) => c.startsWith("healScraper")).length;
+  const syncCalls = calls.filter((c) => c.startsWith("syncToDownstream")).length;
   const auditExists = existsSync(auditPath);
   const decisionMatches = outcome.decision === "approved" && outcome.trigger === "healed_and_approved";
-  const pass = approved && runCalls === 2 && healCalls === 1 && decisionMatches && auditExists;
+  // Phase 5 invariant: branch (e) approved path calls syncToDownstream with the
+  // post-approve validated records, and the audit entry's syncResult is a non-null
+  // summary reflecting those records (not null — that would mean it routed to an
+  // escalation branch by mistake).
+  const syncWiredCorrectly = syncCalls === 1 && outcome.auditEntry.syncResult !== null
+    && (outcome.auditEntry.syncResult as { added: number }).added > 0;
+  const pass = approved && runCalls === 2 && healCalls === 1 && syncWiredCorrectly && decisionMatches && auditExists;
   return {
     name: "decision logic (passing preview): approves + re-runs + writes audit entry",
     pass,
     detail: pass
-      ? `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}`
-      : `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}`,
+      ? `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}, syncResult=${JSON.stringify(outcome.auditEntry.syncResult)}`
+      : `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}, syncResult=${JSON.stringify(outcome.auditEntry.syncResult)}`,
   };
 }
 
@@ -178,21 +189,30 @@ async function testDecisionEscalatesOnFailingPreview(): Promise<TestResult> {
     approveScraper: async () => {
       calls.push("approveScraper");
     },
+    syncToDownstream: async (records: unknown[], _runTimestamp: string) => {
+      calls.push(`syncToDownstream:${records.length}`);
+      return { added: records.length, updated: 0, closedOut: 0 };
+    },
   };
 
   const outcome = await orchestrate({ services, auditPath, statePath, baselinePath });
   const approved = calls.includes("approveScraper");
   const runCalls = calls.filter((c) => c === "runScraper").length;
   const healCalls = calls.filter((c) => c.startsWith("healScraper")).length;
+  const syncCalls = calls.filter((c) => c.startsWith("syncToDownstream")).length;
   const auditExists = existsSync(auditPath);
   const decisionMatches = outcome.decision === "escalated_preview_failed" && outcome.trigger === "healed_and_escalated";
-  const pass = !approved && runCalls === 1 && healCalls === 1 && decisionMatches && auditExists;
+  // Phase 5 invariant: branch (f) escalated_preview_failed does NOT sync to
+  // downstream storage (unvalidated data must never reach storage) and the audit
+  // entry's syncResult is explicitly null. Both conditions must hold.
+  const syncCorrectlySkipped = syncCalls === 0 && outcome.auditEntry.syncResult === null;
+  const pass = !approved && runCalls === 1 && healCalls === 1 && syncCorrectlySkipped && decisionMatches && auditExists;
   return {
     name: "decision logic (failing preview): does NOT approve, escalates, writes audit entry",
     pass,
     detail: pass
-      ? `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}`
-      : `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}`,
+      ? `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, syncResult=null`
+      : `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, syncResult=${JSON.stringify(outcome.auditEntry.syncResult)}`,
   };
 }
 
@@ -238,24 +258,33 @@ async function testBranchBReusesPendingPreviewWithoutNewHeal(): Promise<TestResu
     approveScraper: async () => {
       calls.push("approveScraper");
     },
+    syncToDownstream: async (records: unknown[], _runTimestamp: string) => {
+      calls.push(`syncToDownstream:${records.length}`);
+      return { added: records.length, updated: 0, closedOut: 0 };
+    },
   };
 
   const outcome = await orchestrate({ services, auditPath, statePath, baselinePath });
   const approved = calls.includes("approveScraper");
   const runCalls = calls.filter((c) => c === "runScraper").length;
   const healCalls = calls.filter((c) => c.startsWith("healScraper")).length;
+  const syncCalls = calls.filter((c) => c.startsWith("syncToDownstream")).length;
   const auditExists = existsSync(auditPath);
   const triggerMatches = outcome.trigger === "found_existing_pending_heal";
   const decisionMatches = outcome.decision === "approved";
   // Key branch-(b) invariants: exactly ONE runScraper call (post-approve confirm
   // only — no initial run), and ZERO healScraper calls (reuse stored preview).
-  const pass = approved && runCalls === 1 && healCalls === 0 && triggerMatches && decisionMatches && auditExists;
+  // Phase 5 invariant: branch (b)→(e) approved path does sync to downstream
+  // storage (the post-approve fresh scrape validated cleanly), with syncResult
+  // recorded non-null in the audit entry.
+  const pass = approved && runCalls === 1 && healCalls === 0 && triggerMatches && decisionMatches && auditExists
+    && syncCalls === 1 && outcome.auditEntry.syncResult !== null;
   return {
     name: "branch (b): reuses pending heal preview, no new heal, approves + confirms",
     pass,
     detail: pass
-      ? `approved=${approved}, runScraper=${runCalls} (expected 1), healScraper=${healCalls} (expected 0), trigger=${outcome.trigger}, decision=${outcome.decision}`
-      : `approved=${approved}, runScraper=${runCalls} (expected 1), healScraper=${healCalls} (expected 0), trigger=${outcome.trigger}, decision=${outcome.decision}, auditExists=${auditExists}`,
+      ? `approved=${approved}, runScraper=${runCalls} (expected 1), healScraper=${healCalls} (expected 0), syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}`
+      : `approved=${approved}, runScraper=${runCalls} (expected 1), healScraper=${healCalls} (expected 0), syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, syncResult=${JSON.stringify(outcome.auditEntry.syncResult)}, auditExists=${auditExists}`,
   };
 }
 
