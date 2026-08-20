@@ -1,7 +1,7 @@
 # Project Progress Log
 
-**Status:** Phase 3 done (pending review)
-**Last updated:** 2026-08-22 — Phase 3
+**Status:** Phase 4 in progress (paused after recon)
+**Last updated:** 2026-08-22 — Phase 4 (recon)
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -91,7 +91,10 @@ ScraperMan/
 │       ├── passing-real-baseline.json  # exact copy of baseline (expect PASS)
 │       ├── failing-empty-array.json    # [] (expect FAIL on non_empty_array only)
 │       └── failing-high-nulls.json     # baseline with 4/31 job_title=null (expect FAIL on required_fields_present only)
-├── orchestrator/       # (README stub) Phase 4
+├── orchestrator/       # Phase 4 — healing orchestrator (recon done, logic pending)
+│   ├── README.md       # (stub — to be rewritten in Part B)
+│   └── recon/
+│       └── heal-raw-output-2026-08-20T22-10-15-615Z.txt  # raw captured heal output, unmodified
 ├── downstream/         # (README stub) Phase 5
 ├── demo-page/          # static fake careers page (Northwind Labs) — built but NOT deployed
 │   ├── index.html      # 6 fictional roles, semantic classes (job-card / job-title / job-location / job-apply-link)
@@ -115,6 +118,22 @@ ScraperMan/
 - **`run-cli.ts` and `run-validate.ts` use `process.cwd()`** for REPO_ROOT — relies on npm scripts always running with cwd = repo root. If we ever invoke from another directory (e.g. CI step from a different repo root), paths will break. Acceptable for now, noted for Phase 6.
 
 ## Session Log (most recent entry first)
+
+### Session 5 — Phase 4 (recon only, paused)
+- **Recon: ran a real `bdata scraper heal` against the live collector.** Prompt: "add a department or team field for each role, if available on the page, in addition to the existing job_title, location, and application_url fields". Collector `c_mt21unzzuq4w8c702`. Saved raw unmodified output (stdout+stderr combined via PowerShell `*>`) to `orchestrator/recon/heal-raw-output-2026-08-20T22-10-15-615Z.txt` (7,176 bytes).
+- **Findings (plain terms):**
+  - **State after heal:** `awaiting_approval` — the heal does NOT auto-apply; it stages a new template version and waits for an explicit `bdata scraper approve <id>` to commit. Final JSON's `next_step` field literally says `"bdata scraper approve c_mt21unzzuq4w8c702"`.
+  - **Preview included:** YES, under the `preview_result` key — an array of sample records the healed template would produce (1 record in this run). The sample shows the new `department` field successfully added ("Applied AI" for the Deployment Strategist role) alongside the existing `job_title`/`location`/`location_type`/`application_url`/`product_page_url` fields. This is the signal that lets us validate a heal worked BEFORE approving.
+  - **Duration:** ~59s wall clock, "Done in 43 poll attempts" (much faster than create's 200 polls — heal touches fewer steps).
+  - **Output shape (critical for orchestrator parsing):** the output is MIXED — polling progress noise on stderr + a single final JSON object on the LAST LINE of stdout. The JSON has keys `collector_id`, `status`, `completed_steps`, `prompt`, `view_url`, `next_step`, `preview_result`, `diff_summary`. A parser must extract the last line and `JSON.parse` it (OR capture stdout/stderr separately like `scraper/run-cli.ts` already does — recommended, avoids brittle line-scraping).
+  - **Heal's internal steps** (in `completed_steps`): planner → control_preview_runner → step_advance → control_preview_runner → code_fixer → step_preview_runner → request_fulfillment_validator → step_advance.
+  - **`diff_summary`:** "proposed template has 2 step(s) — review at view_url".
+- **Did NOT run `approve`** (per instructions) — the collector is still in `awaiting_approval` state on Bright Data. This is a real outstanding state to resolve in Part B or manually.
+- **Did NOT write any orchestrator parsing code** (per instructions) — only captured the raw output.
+- **PROGRESS.md.** Marked Phase 4 in progress (paused after recon). Updated Current Phase, Phase Checklist, What Exists Right Now tree. This session log entry.
+- **Implications for Part B (noted for next session, not yet built):** (1) the heal/approve flow is two-step — heal stages, approve commits; (2) `preview_result` can be fed to `validate()` BEFORE approving, so the orchestrator can auto-reject a bad heal (approve only if preview passes validation); (3) the orchestrator's `bdata scraper heal` invocation should capture stdout/stderr separately (like `run-cli.ts` does) rather than merging, so the JSON payload is clean on stdout.
+
+- **Next:** Phase 4 paused after recon, pending review before building orchestrator logic. The user will confirm the parsing plan before Part B is built.
 
 ### Session 4 — Phase 3 (validator)
 - **Closed out Phase 2 Known Issues.** Updated `config/targets.json`: real-target entry's `url` → `https://jobs.ashbyhq.com/retell-ai`, added `humanPageUrl: "https://www.retellai.com/careers"`, reworded `notes` to explain the iframe/embed pivot. Updated `config/schema.json`: `fields` is now an inline array of `{ name, required, type, description }` entries matching the **real** scraper output names — `job_title`, `location`, `application_url` (required) + `location_type`, `product_page_url` (optional). Dropped the original v1 guesses (`role_title`, `job_url`) entirely. `planned_v2_fields` left as its own separate top-level array, unchanged.
