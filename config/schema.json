@@ -1,0 +1,13 @@
+﻿{
+  "version": 1,
+  "fields": {
+    "role_title": { "type": "string", "description": "The advertised title of the open role, as shown on the careers page." },
+    "location": { "type": "string", "description": "The role's location string exactly as posted (may be 'Remote', a city, or 'Remote - City')." },
+    "job_url": { "type": "string", "description": "Direct URL to the individual job posting." }
+  },
+  "planned_v2_fields": {
+    "department": { "type": "string", "description": "Internal department/team the role belongs to (e.g. Engineering, Sales). Reserved for a later self-heal demo - not extracted in v1." },
+    "employment_type": { "type": "string", "description": "Full-time / Part-time / Contract / Intern. Reserved for a later self-heal demo - not extracted in v1." },
+    "date_posted": { "type": "string", "description": "Date the role was posted, as a string in the source's own format. Reserved for a later self-heal demo - not extracted in v1." }
+  }
+}

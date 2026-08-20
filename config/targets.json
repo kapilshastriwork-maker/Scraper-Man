@@ -1,0 +1,23 @@
+﻿{
+  "version": 1,
+  "targets": [
+    {
+      "id": "retell",
+      "url": "https://www.retellai.com/careers",
+      "ats": "custom",
+      "notes": "Custom-built careers page on the company's own domain. Not a third-party ATS. Server-rendered HTML with possible client-side hydration."
+    },
+    {
+      "id": "linear",
+      "url": "https://jobs.ashbyhq.com/Linear",
+      "ats": "ashby",
+      "notes": "Ashby ATS. JavaScript-rendered single-page application - job list and details are injected client-side, so requests need JS rendering or an API interception approach."
+    },
+    {
+      "id": "kalshi",
+      "url": "https://job-boards.greenhouse.io/kalshi",
+      "ats": "greenhouse",
+      "notes": "Greenhouse ATS job board. More traditional server-rendered markup - jobs are present in the initial HTML response, making it the most straightforward of the three to parse."
+    }
+  ]
+}
