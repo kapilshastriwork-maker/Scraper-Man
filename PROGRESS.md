@@ -1,7 +1,7 @@
 # Project Progress Log
 
-**Status:** Phase 5 done (pending review)
-**Last updated:** 2026-08-22 — Phase 5
+**Status:** Phase 6 done (pending review)
+**Last updated:** 2026-08-21 — Phase 6
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -10,7 +10,7 @@
 - Anything decided that future sessions must respect (naming, schema, target URLs, tech choices, tradeoffs) goes under Key Decisions, not just buried in the log.
 
 ## Current Phase
-Phase 5 of 7 — Downstream + audit timeline (done, pending review)
+Phase 6 of 7 — Unattended CI loop + scale (done, pending review)
 
 ## Phase Checklist
 - [x] Phase 1 — Foundation & target lock-in
@@ -18,10 +18,10 @@ Phase 5 of 7 — Downstream + audit timeline (done, pending review)
 - [x] Phase 3 — Validator *(done, pending review)*
 - [x] Phase 4 — Healing orchestrator *(done, pending review)*
 - [x] Phase 5 — Downstream + audit timeline *(done, pending review)*
-- [ ] Phase 6 — Unattended CI loop + scale
+- [x] Phase 6 — Unattended CI loop + scale
 - [ ] Phase 7 — Controlled-break demo, polish, submit
 
-> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes. Phase 4 done pending review: full healing orchestrator with preview/full validation split + state/audit-log disagreement fix landed (see Session 6). Phase 5 done pending review: downstream SQLite storage (`downstream/db.ts`) wired into the orchestrator on the two full-validate PASS paths; two static HTML pages (`timeline.html` + `jobs.html`) committed as deployable snapshots.
+> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes. Phase 4 done pending review: full healing orchestrator with preview/full validation split + state/audit-log disagreement fix landed (see Session 6). Phase 5 done pending review: downstream SQLite storage (`downstream/db.ts`) wired into the orchestrator on the two full-validate PASS paths; two static HTML pages (`timeline.html` + `jobs.html`) committed as deployable snapshots. Phase 6 done pending review: unattended GitHub Actions pipeline (cron 0 */12 * * * + workflow_dispatch) with data.db committed for cross-run persistence; CI run e93312b produced healthy_run_no_action with 33 records (baseline 31), sync +2 added, ~31 updated, -0 closedOut — first organic drift handled end-to-end unattended.
 
 ## Key Decisions
 
@@ -149,7 +149,7 @@ ScraperMan/
 
 - **SETUP_CHECKLIST.md library-check step still pending.** The other 4 of 5 steps functionally verified during Phase 2: `bdata login --device`'s token was already cached (so create/run/heal/approve work without browser interaction), `bdata --version` returned `0.3.5`, Bright Data signup implicitly worked (we created collectors). The remaining step is purely observational: visit brightdata.com/cp/scrapers/browse and confirm no maintained library scraper already covers `jobs.ashbyhq.com/retell-ai` (or the Ashby platform generally). Non-blocking — we've already created our own — but should still be done for the checklist's completeness.
 
-- **GitHub remote** — intentionally unset. Open question for later (before Phase 6): the GitHub repo name + remote URL will be chosen by the human. Phase 7's demo-page deployment also depends on this.
+- **GitHub remote** — now configured (`origin` → https://github.com/kapilshastriwork-maker/Scraper-Man). Used by Phase 6 CI pipeline. Phase 7's demo-page deployment also depends on this.
 
 - **Run-cli details:** `npm run scraper:run` captures bdata's stdout (JSON) and writes `runs/<ts>.json` + `runs/latest.json`. Polling progress (`Polling (attempt N/600)`) is shown to stderr. Average run takes ~60 polls (~1-2 min). If a future run hits a 600-attempt timeout that's the signal a heal is needed.
 
@@ -159,6 +159,14 @@ ScraperMan/
 
 ## Session Log (most recent entry first)
 
+### Session 8 — Phase 6 (unattended CI pipeline + data.db persistence fix)
+- **Data.db persistence reversal.** Previously `downstream/data.db` was gitignored as transient cache (Phase 5 Key Decision). Reversed because GitHub Actions runners are stateless, there is no external database in this stack, and `data.db` is the **sole carrier of `first_seen_at` / `is_active` history** between scheduled runs. Committing it makes that history survive across workflow executions. Removed `.gitignore` entry, committed `data.db*` files, updated `downstream/README.md` with new rationale.
+- **CI workflow.** Created `.github/workflows/pipeline.yml`: triggers on `schedule` (cron `0 */12 * * *`) and `workflow_dispatch`; `permissions: contents: write`; `concurrency: group= pipeline, cancel-in-progress: false`; steps: checkout (fetch-depth: 0) → setup-node (`.nvmrc`) → `npm ci` → `npm run orchestrate` → `npm run timeline:build` → `npm run jobs:build` → bot git identity → staged add of changed artifacts (`data.db*`, `audit-log.jsonl`, `state.json`, `timeline.html`, `jobs.html`, `scraper/runs/*`) → conditional commit+push (`Automated run: <ISO timestamp>`). `BRIGHTDATA_API_KEY` from secret.
+- **Manual verification.** Triggered `workflow_dispatch` in GitHub UI. Run `e93312b` completed **green**, produced a commit. Diff shows updates to `downstream/data.db*`, `orchestrator/audit-log.jsonl`, `orchestrator/state.json`, `downstream/timeline.html`, `downstream/jobs.html`, `scraper/runs/latest.json`, and new timestamped run file under `scraper/runs/`.
+- **Key evidence — organic drift handled end-to-end.** After pulling the CI commit, `downstream/timeline.html` now shows **2 entries**: (1) original Phase 4 `approved` event (2026-08-20T22:31:59Z), (2) new `healthy_run_no_action` (2026-08-21T11:48:31Z) with **33 records vs baseline 31**, storage sync **+2 added, ~31 updated, -0 closedOut**. This confirms: (a) the scraper detected 2 genuinely new job postings that appeared organically since the baseline, and (b) the Phase 5 sync-on-pass wiring fired correctly on a real CI-triggered healthy run. First time organic content drift handled correctly unattended — core evidence for the self-healing narrative.
+- **PROGRESS.md.** Header status → `Phase 6 done (pending review)`. Tick Phase 6 checklist. Current Phase → Phase 6 of 7. Updated summary paragraph and GitHub remote known issue. This Session 8 entry.
+- **Next:** Phase 7 will do the controlled-break demo against the GitHub Pages demo page, which can now finally be deployed since a GitHub remote exists.
+
 ### Session 7 — Phase 5 (downstream SQLite storage + audit timeline)
 - **Storage layer.** Added `better-sqlite3` (^13.x.x — installed cleanly, native build succeeded on the dev machine) + `@types/better-sqlite3` (^9.x.x). Created `downstream/db.ts` exporting `initDb(dbPath)`, `syncJobs(dbPath, records, runTimestamp) -> { added, updated, closedOut }`, and `getActiveJobs(dbPath)`. `syncJobs` runs as a single transaction: INSERT new records with `first_seen_at = last_seen_at = runTimestamp, is_active = 1`; on conflict UPDATE non-key fields + `last_seen_at`, set `is_active = 1` (preserve `first_seen_at`); rows whose `application_url` is NOT in this run's records get `is_active` flipped to 0 (NEVER deleted — vanishing is real signal). Schema: `application_url TEXT PRIMARY KEY, job_title, location, location_type, product_page_url, first_seen_at, last_seen_at, is_active INTEGER, department TEXT NULL` — `department` is reserved for the `planned_v2_fields` extension and NULL in v1 (real Ashby page doesn't expose per-role department; see Session 6 preview-vs-production drift).
 - **Gitignore policy: transient cache vs deployable product.** `downstream/data.db` is gitignored (regenerable from `scraper/runs/*.json`; would cause merge conflicts). `downstream/timeline.html` and `downstream/jobs.html` ARE committed — they're deployable snapshots meant to be opened by a judge/reviewer with zero setup. Regenerate-and-recommit is expected behavior over the coming phases.
@@ -167,7 +175,7 @@ ScraperMan/
 - **Full-validate-as-gate CLI.** `downstream/run-sync.ts` (# `npm run downstream:sync [-- <runPath>]`) loads a run file (default `scraper/runs/latest.json`), full-validates against baseline, only opens the DB and calls `syncJobs` on `PASS`. On `FAIL`, prints the diff and exits non-zero WITHOUT touching the DB. Smoke-tested end-to-end against the real Phase 4 step-9 run file: `SYNC OK (31 records) -> downstream/data.db, added: 31, updated: 0, closedOut: 0`.
 - **Two static HTML pages (no framework, no build step, double-click runnable).** `build-timeline.ts` (# `npm run timeline:build`) renders `timeline.html` from `orchestrator/audit-log.jsonl`: reverse-chronological `<ol>`, inline CSS with dark-mode support, each entry shows timestamp / trigger / decision / one-line reasoning (truncated ~200 chars with full text in `title` attr) / sync counts if non-null. `build-jobs-page.ts` (# `npm run jobs:build`) renders `jobs.html` from `is_active=1` rows in the DB: a public-facing "who's hiring" list — title, location, apply link. This is the actual downstream product the Collector ID's data is "for." Both pages regenerated and committed against real Phase 4 data (1 audit entry in `timeline.html`, 31 active roles in `jobs.html`).
 - **Tests + npm scripts.** `downstream/run-tests.ts` (# `npm run downstream:test`) — 5 assertions, fresh temp DB per test via `mkdtempSync(join(tmpdir(), "downstream-test-"))` (NEVER touches the real `downstream/data.db`): (1) initDb creates file+table; (2) first sync 10 records → added=10; (3) second sync same data → updated=10, `last_seen_at` advances, `first_seen_at` preserved; (4) third sync drops one URL + adds one → closedOut=1, added=1, updated=9, vanished row persists with `is_active=0` (NOT deleted), total rows = 11; (5) `getActiveJobs` excludes closed rows. All 3 test CLIs PASS: `validate:test` (5), `orchestrate:test` (5, with new sync assertions), `downstream:test` (5). `tsc --noEmit` clean. Added 5 new npm scripts: `downstream:sync`, `downstream:test`, `timeline:build`, `jobs:build`, and `orchestrate:test` (the orchestrator tests previously had no backing npm script — only runnable via `tsx` directly).
-- **PROGRESS.md.** Header status → `Phase 5 done (pending review)`. Tick Phase 4 + Phase 5 checklist boxes. Current Phase line → Phase 5 of 7. Added 8 Phase 5 Key Decisions bullets (storage schema, syncJobs semantics, gitignore vs commit policy, orchestrator wiring, audit shape extension, full-validate-as-gate, two static HTML pages, testability). Updated "What Exists Right Now" tree to show `downstream/` contents, the real orchestrator files, and the real `package.json` script list. This Session 7 entry.
+- **PROGRESS.md.** Header status → `Phase 6 done (pending review)`. Tick Phase 4 + Phase 5 checklist boxes. Current Phase line → Phase 5 of 7. Added 8 Phase 5 Key Decisions bullets (storage schema, syncJobs semantics, gitignore vs commit policy, orchestrator wiring, audit shape extension, full-validate-as-gate, two static HTML pages, testability). Updated "What Exists Right Now" tree to show `downstream/` contents, the real orchestrator files, and the real `package.json` script list. This Session 7 entry.
 
 - **Next:** Phase 6 will wire the whole loop into a GitHub Actions cron — this needs a GitHub remote, which was deliberately deferred since Phase 1.
 
