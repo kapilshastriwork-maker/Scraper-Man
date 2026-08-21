@@ -1,0 +1,61 @@
+name: Pipeline
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run orchestrator (scrape → validate → heal → sync)
+        run: npm run orchestrate
+
+      - name: Build audit timeline
+        run: npm run timeline:build
+
+      - name: Build jobs page
+        run: npm run jobs:build
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Stage changed artifacts
+        run: |
+          git add downstream/data.db downstream/data.db-shm downstream/data.db-wal 2>/dev/null || true
+          git add orchestrator/audit-log.jsonl orchestrator/state.json
+          git add downstream/timeline.html downstream/jobs.html
+          git add scraper/runs/latest.json
+          git add scraper/runs/*.json 2>/dev/null || true
+
+      - name: Commit & push if changes exist
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Automated run: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
+          else
+            echo "No changes to commit (healthy run, zero drift)"
+          fi

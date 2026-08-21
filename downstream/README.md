@@ -23,19 +23,18 @@ log.
   link). This is the actual downstream product the Collector ID's scraped data is "for."
 - `run-tests.ts` — backs `npm run downstream:test`. Uses a fresh temp DB per test; never
   touches the real `downstream/data.db`.
-- `data.db` — the SQLite DB itself. **Gitignored** (see below).
+- `data.db` — the SQLite DB itself. **Tracked** (see below).
 - `timeline.html`, `jobs.html` — the two static HTML snapshots. **Tracked**, regenerable
   via the build scripts above. Re-regenerating and recommitting them after each
   orchestrate cycle is expected behavior over the coming phases.
 
-## The DB is gitignored on purpose
+## Why data.db is tracked
 
-`downstream/data.db` is generated data, fully regenerable from `scraper/runs/*.json`.
-Gitignore keeps it out of the repo because (a) it can grow large, (b) it carries no
-information that the `scraper/runs/` history doesn't already preserve, and (c) it would
-cause spurious merge conflicts if multiple machines ran the orchestrator. The HTML
-snapshots ARE committed because they're intended to be opened and shared directly by a
-judge or reviewer with zero setup — they're deployable product, not transient cache.
+`downstream/data.db` is the **sole carrier of `first_seen_at` / `is_active` history** between
+scheduled CI runs. GitHub Actions runners are stateless and there is no external database in
+this stack; committing the DB is what makes that history survive across workflow executions.
+The file is small enough to version and is regenerated on every successful run, so merge
+conflicts are not a practical concern.
 
 ## Storage schema
 
