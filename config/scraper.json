@@ -2,7 +2,7 @@
   "collectorId": "c_mt21unzzuq4w8c702",
   "targetUrl": "https://jobs.ashbyhq.com/retell-ai",
   "createdAt": "2026-08-20T21:45:40.607Z",
-  "fields": ["role_title", "location", "job_url"],
+  "fields": ["job_title", "location", "application_url"],
   "fieldDescription": "job title, location (remote/onsite/city), and the direct application URL for each open role listed on this job board",
   "abandonedCollectorIds": ["c_mt21dfrd1jpyf7wgrx"],
   "abandonedNote": "Original target retellai.com/careers returned empty jobs - it's a Webflow marketing shell with no job data in-page. Pivoted to the Ashby-hosted board at jobs.ashbyhq.com/retell-ai. Abandoned collector kept on Bright Data as a record, not deleted."

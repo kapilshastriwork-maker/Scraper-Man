@@ -1,7 +1,7 @@
 # Project Progress Log
 
-**Status:** Phase 6 done (pending review)
-**Last updated:** 2026-08-21 — Phase 6
+**Status:** Phase 7 in progress — Part A done
+**Last updated:** 2026-08-22 — Phase 7 Part A
 
 ## How to use this file (read this first, every session)
 - Read this file in FULL before doing any work in a new session.
@@ -10,7 +10,7 @@
 - Anything decided that future sessions must respect (naming, schema, target URLs, tech choices, tradeoffs) goes under Key Decisions, not just buried in the log.
 
 ## Current Phase
-Phase 6 of 7 — Unattended CI loop + scale (done, pending review)
+Phase 7 of 7 — Controlled-break demo, polish, submit (Part A done)
 
 ## Phase Checklist
 - [x] Phase 1 — Foundation & target lock-in
@@ -19,9 +19,9 @@ Phase 6 of 7 — Unattended CI loop + scale (done, pending review)
 - [x] Phase 4 — Healing orchestrator *(done, pending review)*
 - [x] Phase 5 — Downstream + audit timeline *(done, pending review)*
 - [x] Phase 6 — Unattended CI loop + scale
-- [ ] Phase 7 — Controlled-break demo, polish, submit
+- [ ] Phase 7 — Controlled-break demo, polish, submit *(Part A done: demo page deployed, demo collector live end-to-end through validate/orchestrate; remaining: controlled-break film + polish + submit)*
 
-> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes. Phase 4 done pending review: full healing orchestrator with preview/full validation split + state/audit-log disagreement fix landed (see Session 6). Phase 5 done pending review: downstream SQLite storage (`downstream/db.ts`) wired into the orchestrator on the two full-validate PASS paths; two static HTML pages (`timeline.html` + `jobs.html`) committed as deployable snapshots. Phase 6 done pending review: unattended GitHub Actions pipeline (cron 0 */12 * * * + workflow_dispatch) with data.db committed for cross-run persistence; CI run e93312b produced healthy_run_no_action with 33 records (baseline 31), sync +2 added, ~31 updated, -0 closedOut — first organic drift handled end-to-end unattended.
+> Phase 1 done. Phase 2 done (demo page built, deployment deferred). Phase 3 done pending review: the validator's five rules + three test fixtures all produce their expected outcomes. Phase 4 done pending review: full healing orchestrator with preview/full validation split + state/audit-log disagreement fix landed (see Session 6). Phase 5 done pending review: downstream SQLite storage (`downstream/db.ts`) wired into the orchestrator on the two full-validate PASS paths; two static HTML pages (`timeline.html` + `jobs.html`) committed as deployable snapshots. Phase 6 done pending review: unattended GitHub Actions pipeline (cron 0 */12 * * * + workflow_dispatch) with data.db committed for cross-run persistence; CI run e93312b produced healthy_run_no_action with 33 records (baseline 31), sync +2 added, ~31 updated, -0 closedOut — first organic drift handled end-to-end unattended. Phase 7 Part A done (Session 9): demo page deployed to GitHub Pages and scraped by a dedicated collector through a full create→(4× heal)→approve saga that exposed a reproducible platform wrapper-shape behavior, resolved via the narrowly-scoped `normalize-demo-output.ts` reshape adapter; multi-target `--target=demo` support added to run-cli + orchestrator; clean `orchestrate:demo` checkpoint passed with real-target isolation proven.
 
 ## Key Decisions
 
@@ -79,6 +79,14 @@ Phase 6 of 7 — Unattended CI loop + scale (done, pending review)
 
 - **Data.db persistence reversal (2026-08-22).** Previously `downstream/data.db` was gitignored as transient cache (see Phase 5 Key Decision "Gitignore policy: transient cache vs deployable product"). Reversed in Phase 6 because GitHub Actions runners are stateless, there is no external database in this stack, and `data.db` is the **sole carrier of `first_seen_at` / `is_active` history** between scheduled runs. Committing it makes that history survive across workflow executions. The `.gitignore` entry was removed, the file is now tracked, and `downstream/README.md` was updated with the new rationale.
 
+- **Demo target infrastructure (Phase 7 Part A):**
+  - **Demo page is deployed.** Live at `https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/` — this is now the `type: "demo"` URL in `config/targets.json` (no longer TBD). Markup was restructured in commit `4317f12` from `<article class="job-card">` to `<ul class="roles">/<li class="role">` (inner `job-title`/`job-location`/`job-apply-link` unchanged) — see Session 9 for why.
+  - **Dedicated demo collector via `config/demo-scraper.json`.** Active collector `c_mt41tsfb1160modp6z` (created 2026-08-22T07:20Z) against the live demo URL. Two abandoned collectors documented in its `abandonedCollectorIds`: `c_mt38x3t61u0a0c6mll` (original article.job-card markup; first-record-only extraction, 2 failed heals) and `c_mt41d5pczex8zq60n` (new markup; 6/6 extraction but wrapped output shape). All left on Bright Data as records.
+  - **Multi-target orchestrate + run-cli.** `--target=demo|real` (default real; also `ORCHESTRATE_TARGET` env for orchestrate). Demo branches every artifact path: config → `config/demo-scraper.json`, baseline → `demo-page/demo-baseline-output.json`, runs → `demo-page/demo-runs/<ts>.json` + `latest.json`, state → `orchestrator/state-demo.json`, audit → `orchestrator/audit-log-demo.jsonl`. New npm script `orchestrate:demo`.
+  - **Downstream storage hard-disabled on the demo target.** The SQLite jobs DB (`data.db`, first_seen_at/is_active history, jobs.html) is the REAL target's downstream product. On demo, `syncToDownstream` is a throwing stub and both full-validate-PASS call sites skip sync via a `skipDownstreamSync` guard — `syncResult` stays null in audit entries and an accidental call-site regression fails loudly instead of silently polluting the real DB.
+
+- **The normalize adapter policy exception (Phase 7 Part A).** `demo-page/normalize-demo-output.ts` is the ONE piece of local data-shaping code in this repo, and it is explicitly NOT extraction: no HTML parsing, no selectors, no decisions about what counts as a role. It only unwraps the platform's single `{job_listings}` wrapper object and aliases space-keyed names (`"job title"` → `job_title`, `"application url"` → `application_url`) into the flat schema shape. Rationale: across FOUR create/heal attempts on TWO independently-created collectors, Scraper Studio extracted all values correctly every time (6/6 records), but production output NEVER once matched the requested flat shape while preview_result DID — a reproducible platform behavior (raw evidence: `demo-page/demo-raw-output.json` + recon artifacts under `orchestrator/recon/`). Reshaping already-extracted values is presentation-layer mapping; all extraction/value-correctness work genuinely happened in Scraper Studio. Guardrails: throws on any unrecognized shape rather than guessing; passes through an already-flat array untouched; used ONLY on the `--target=demo` path — the real target's pipeline never touches it. Scope documented in the file header ("read before 'fixing' it away") and `demo-page/README.md`.
+
 ## What Exists Right Now
 
 ```
@@ -90,14 +98,15 @@ ScraperMan/
 ├── README.md            # project pitch + progress + architecture
 ├── SETUP_CHECKLIST.md   # 5 human-only setup checkboxes
 ├── PROGRESS.md          # THIS FILE — cross-session project memory
-├── package.json         # scripts: scraper:*, validate, validate:test, orchestrate, orchestrate:test, downstream:{sync,test}, timeline:build, jobs:build, audit:view, state:seed, dev (placeholder)
+├── package.json         # scripts: scraper:*, validate, validate:test, orchestrate [--target=demo], orchestrate:demo, orchestrate:test, downstream:{sync,test}, timeline:build, jobs:build, audit:view, state:seed, dev (placeholder)
 ├── package-lock.json    # lockfile (tracked) — tsx + @types/node + better-sqlite3 + @types/better-sqlite3
 ├── tsconfig.json        # TS strict, ES2022/NodeNext
 ├── node_modules/        # gitignored
 ├── config/
-│   ├── targets.json     # 2 targets: 1 real (Ashby URL + humanPageUrl marketing page) + 1 self-controlled demo (TBD GH Pages)
+│   ├── targets.json     # 2 targets: 1 real (Ashby URL + humanPageUrl marketing page) + 1 self-controlled demo (live GitHub Pages URL)
 │   ├── schema.json      # fields (inline {name,required}: job_title/location/application_url + optionals), planned_v2_fields
-│   └── scraper.json     # collectorId c_mt21unzzuq4w8c702, targetUrl, abandonedCollectorIds, fieldDescription
+│   ├── scraper.json     # real target: collectorId c_mt21unzzuq4w8c702, targetUrl, abandonedCollectorIds, fieldDescription
+│   └── demo-scraper.json # demo target: collectorId c_mt41tsfb1160modp6z, live GH Pages targetUrl, 2 abandonedCollectorIds + saga note
 ├── scraper/             # Phase 2 — wrapper around the Bright Data scraper
 │   ├── README.md        # collector metadata, abandoned note, re-run instructions
 │   ├── run-cli.ts       # TS entrypoint backing npm scripts (create/run/heal/approve)
@@ -120,12 +129,15 @@ ScraperMan/
 │   ├── compose-heal-prompt.ts # ValidationResult.diff → plain-language heal prompt
 │   ├── seed-state-from-recon.ts # CLI: npm run state:seed -- <reconFile> <stateFile> [--force]
 │   ├── view-audit-log.ts # CLI: npm run audit:view — one-line-per-entry print
-│   ├── state.json      # local source of truth for collector state (lastKnownStatus, etc.)
-│   ├── audit-log.jsonl # append-only audit log; entry has syncResult since Phase 5
+│   ├── state.json      # local source of truth for real-target collector state (lastKnownStatus, etc.)
+│   ├── audit-log.jsonl # append-only audit log (REAL target); entry has syncResult since Phase 5
+│   ├── state-demo.json # demo-target state counterpart (created on demand by orchestrate --target=demo)
+│   ├── audit-log-demo.jsonl # demo-target audit log; 1 clean healthy_run_no_action checkpoint entry
 │   ├── run-tests.ts    # CLI: npm run orchestrate:test — 5 fixtures (no real bdata calls)
 │   └── recon/
-│       ├── heal-raw-output-2026-08-20T22-10-15-615Z.txt  # raw captured heal output
-│       └── post-fix-correction.json  # SYNTHETIC approve output used to seed state.json after fix
+│       ├── heal-raw-output-2026-08-20T22-10-15-615Z.txt  # raw captured heal output (real target)
+│       ├── post-fix-correction.json  # SYNTHETIC approve output used to seed state.json after fix
+│       └── demo-*-{stdout,stderr}-*.txt # Phase 7 Part A recon: demo create/heal/approve/run raw outputs (Sessions 9 saga evidence)
 ├── downstream/         # Phase 5 — SQLite storage + audit timeline
 │   ├── README.md        # schema, gitignore rationale, rebuild instructions
 │   ├── db.ts            # initDb, syncJobs (upsert + closeout in single txn), getActiveJobs
@@ -136,16 +148,20 @@ ScraperMan/
 │   ├── timeline.html    # committed deployable snapshot (regenerable)
 │   ├── jobs.html        # committed deployable snapshot (regenerable)
 │   └── data.db          # gitignored — SQLite DB, regenerable from scraper/runs/
-├── demo-page/          # static fake careers page (Northwind Labs) — built but NOT deployed
-│   ├── index.html      # 6 fictional roles, semantic classes (job-card / job-title / job-location / job-apply-link)
-│   └── README.md       # Phase 7 controlled-break demo purpose
+├── demo-page/          # static fake careers page (Northwind Labs) — DEPLOYED to GitHub Pages
+│   ├── index.html      # 6 fictional roles under <ul class="roles">/<li class="role"> (inner job-title/job-location/job-apply-link)
+│   ├── README.md       # markup history, raw-vs-normalized explanation, adapter policy note, demo-runs/ docs
+│   ├── normalize-demo-output.ts # reshape adapter: unwrap job_listings wrapper + alias space keys; NOT extraction; --target=demo only
+│   ├── demo-baseline-output.json # FROZEN normalized flat 6-record reference for the demo validator
+│   ├── demo-raw-output.json # raw unmodified platform output (wrapped shape) kept as evidence
+│   └── demo-runs/      # per-run <ts>.json + latest.json from `npm run scraper:run -- --target=demo` (already normalized)
 └── docs/
     └── ARCHITECTURE.md  # section headers only, to be filled in later phases
 ```
 
 ## Known Issues / Open Questions
 
-- **Demo page is built locally but not deployed** — needs a GitHub repo + remote + Pages enabled in Settings before Phase 7. Manual step, not agent-doable. The `targets.json` `type: "demo"` URL stays `TBD — GitHub Pages URL` until then.
+- **Demo page — RESOLVED (was: built but not deployed).** Deployed to GitHub Pages at `https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/`; URL locked into `config/targets.json` and scraped by demo collector `c_mt41tsfb1160modp6z`. Remaining Phase 7 work is Part B: the controlled-break film (deliberately restructure the live page's markup, let the unattended CI/orchestrate loop detect + heal + approve it, capture evidence), then polish + submit.
 
 - **SETUP_CHECKLIST.md library-check step still pending.** The other 4 of 5 steps functionally verified during Phase 2: `bdata login --device`'s token was already cached (so create/run/heal/approve work without browser interaction), `bdata --version` returned `0.3.5`, Bright Data signup implicitly worked (we created collectors). The remaining step is purely observational: visit brightdata.com/cp/scrapers/browse and confirm no maintained library scraper already covers `jobs.ashbyhq.com/retell-ai` (or the Ashby platform generally). Non-blocking — we've already created our own — but should still be done for the checklist's completeness.
 
@@ -158,6 +174,24 @@ ScraperMan/
 - **`run-cli.ts` and `run-validate.ts` use `process.cwd()`** for REPO_ROOT — relies on npm scripts always running with cwd = repo root. If we ever invoke from another directory (e.g. CI step from a different repo root), paths will break. Acceptable for now, noted for Phase 6.
 
 ## Session Log (most recent entry first)
+
+### Session 9 — Phase 7 Part A (demo target infrastructure + the extraction-shape saga)
+- **Demo page deployed.** `demo-page/index.html` is live on GitHub Pages at `https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/` (the GitHub remote from Phase 6 made this possible). URL locked into `config/targets.json` (`type: "demo"`, no longer TBD) and used as the target for a dedicated demo collector.
+
+- **The saga, part 1 — first-record-only extraction on the original markup.** The page originally used `<article class="job-card">` wrappers. Collector `c_mt38x3t61u0a0c6mll` (created against the live URL) extracted only the FIRST of 6 roles. Two heal attempts were run with prompts explicitly demanding all 6 records (recon: `orchestrator/recon/demo-heal-raw-output-2026-08-21T18-13-00-516Z.txt` — prompt literally says "extract all 6, one record per card, not just the first" — and `...19-14-27-843Z.txt`; runs `demo-run-2/3`, approve `demo-approve/2`). Both heals converged on the same first-record-only result in production despite preview_result showing more than one record. Diagnosis: the platform's template planner was not reliably iterating card-style repeated blocks; list semantics (`<ul>`/`<li>`) are a structure it handles reliably. Fix: commit `4317f12` restructured the page to `<ul class="roles"><li class="role">…</li></ul>` (inner `job-title`/`job-location`/`job-apply-link` classes unchanged), and the live Pages site was updated.
+
+- **The saga, part 2 — extraction fixed, but a NEW wrapper-shape problem appeared.** Fresh collector `c_mt41d5pczex8zq60n` created against the new markup: extraction now correct (6/6 records, values perfect), but production output came back wrapped as `[{"job_listings":[…],"input":{…}}]` with spaced key names (`"job title"`, `"application url"`) instead of the requested flat top-level array with `job_title`/`location`/`application_url`. A heal explicitly demanding the flat shape was attempted; its preview_result came back in the CORRECT flat shape, but the post-approve production output reverted to the wrapped shape.
+
+- **The saga, part 3 — reproducibility proven across two collectors and four attempts.** A second fresh collector `c_mt41tsfb1160modp6z` was created (this one becomes the active demo collector) and another heal attempted — same outcome again. Final tally: FOUR heal/create attempts across TWO independently-created collectors, every single one showing (a) preview_result in the requested flat shape, (b) production output in the wrapped/space-keyed shape, (c) all VALUES extracted correctly every time. Conclusion: this is reproducible platform behavior, NOT a prompting failure. Evidence committed under `orchestrator/recon/`: `demo-create{,-2,-3}`, `demo-run-4..7`, `demo-heal-3/4`, `demo-approve-{,2,3,4}` stdout/stderr pairs; plus `demo-page/demo-raw-output.json` preserving the raw wrapped output verbatim.
+
+- **Decision: build the reshape adapter instead of fighting the platform.** `demo-page/normalize-demo-output.ts` unwraps the single `{job_listings}` wrapper and aliases space-keyed names to schema keys. This is a deliberate, narrowly-scoped exception to the "no local extraction code" policy, and the reasoning is documented in three places (file header, `demo-page/README.md`, Key Decisions): it performs ZERO extraction — no HTML parsing, no selectors, no role-detection decisions. All extraction AND value-correctness work was genuinely done by Scraper Studio (6/6 correct on all four attempts); only key-renaming and unwrapping happen locally, which is presentation-layer mapping. Guardrails: throws on unrecognized shapes rather than guessing, passes through an already-flat array untouched, and is wired ONLY into the `--target=demo` path — the real target's pipeline never touches it.
+
+- **Multi-target orchestrator + run-cli support.** `--target=demo|real` flag (default real; orchestrate also accepts `ORCHESTRATE_TARGET` env). Demo branches: config → `config/demo-scraper.json`, baseline → `demo-page/demo-baseline-output.json` (frozen normalized flat 6-record reference), run outputs → `demo-page/demo-runs/<ts>.json` + `latest.json` (run-cli applies the adapter before writing, so validation always sees flat shape), state → `orchestrator/state-demo.json`, audit → `orchestrator/audit-log-demo.jsonl`. New npm script `orchestrate:demo`. Downstream storage is HARD-disabled on demo: `syncToDownstream` becomes a throwing stub and both full-validate-PASS call sites skip via a `skipDownstreamSync` guard — the SQLite jobs DB is the real target's downstream product and demo runs must never write to it; an accidental regression fails loudly. Also fixed while touching it: `config/scraper.json`'s stale v1 `fields` names (`role_title`/`job_url`) corrected to the real output field names (`job_title`/`application_url`).
+
+- **Final verified checkpoint.** Clean `npm run orchestrate:demo` run: trigger `healthy_run_no_action`, decision `no_action`, 6 records vs baseline 6, zero rules fired, `syncResult: null`, audit entry written to `audit-log-demo.jsonl` (timestamp 2026-08-22T09:11:11Z). Isolation evidence: real-target artifacts (`downstream/data.db*`, `orchestrator/audit-log.jsonl`, `orchestrator/state.json`) unmodified by any demo activity — confirmed clean in `git status`. Regression evidence: `tsc --noEmit` clean; all suites pass — `validate:test` (5), `orchestrate:test` (5), `downstream:test` (5).
+
+- **Docs.** Rewrote `demo-page/README.md` for the new reality (deployed URL, ul/li markup history, raw-vs-normalized explanation, adapter policy note, demo-runs/ docs). Updated `config/targets.json`. Added Phase 7 Key Decisions (demo infra, multi-target support, adapter policy exception). This Session 9 entry.
+- **Phase 7 Part A done.** Next (Part B): the controlled-break film — deliberately restructure the LIVE demo page markup, let the loop detect/heal/approve unattended, capture evidence — then polish + submit.
 
 ### Session 8 — Phase 6 (unattended CI pipeline + data.db persistence fix)
 - **Data.db persistence reversal.** Previously `downstream/data.db` was gitignored as transient cache (Phase 5 Key Decision). Reversed because GitHub Actions runners are stateless, there is no external database in this stack, and `data.db` is the **sole carrier of `first_seen_at` / `is_active` history** between scheduled runs. Committing it makes that history survive across workflow executions. Removed `.gitignore` entry, committed `data.db*` files, updated `downstream/README.md` with new rationale.

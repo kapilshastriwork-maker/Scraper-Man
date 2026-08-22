@@ -15,6 +15,7 @@
     "validate": "tsx validator/run-validate.ts",
     "validate:test": "tsx validator/run-tests.ts",
     "orchestrate": "tsx orchestrator/orchestrate.ts",
+    "orchestrate:demo": "tsx orchestrator/orchestrate.ts --target=demo",
     "orchestrate:test": "tsx orchestrator/run-tests.ts",
     "state:seed": "tsx orchestrator/seed-state-from-recon.ts",
     "audit:view": "tsx orchestrator/view-audit-log.ts",

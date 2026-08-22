@@ -10,9 +10,9 @@
     },
     {
       "id": "demo",
-      "url": "TBD - GitHub Pages URL, to be set once deployed in Phase 2",
+      "url": "https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/",
       "type": "demo",
-      "notes": "static page we fully control, built to mirror the schema of the real target, used exclusively for the deliberate structural-break self-heal demo in Phase 7"
+      "notes": "static page we fully control, deployed to GitHub Pages, mirrors the schema of the real target. Used for the Phase 7 Part A extraction-shape saga (see demo-page/README.md + normalize-demo-output.ts) and the upcoming deliberate structural-break self-heal demo. Scraped by collector c_mt41tsfb1160modp6z (config/demo-scraper.json); run outputs land in demo-page/demo-runs/."
     }
   ]
 }

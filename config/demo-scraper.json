@@ -1,0 +1,9 @@
+{
+  "collectorId": "c_mt41tsfb1160modp6z",
+  "targetUrl": "https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/",
+  "createdAt": "2026-08-22T07:20:32.039Z",
+  "fields": ["job_title", "location", "application_url"],
+  "fieldDescription": "extract all 6 job listings from this page, one per <li class='role'> element, as a flat top-level JSON array - each element with exactly three string keys: job_title, location, application_url (see demo-page/normalize-demo-output.ts for why the raw output still needs reshaping)",
+  "abandonedCollectorIds": ["c_mt38x3t61u0a0c6mll", "c_mt41d5pczex8zq60n"],
+  "abandonedNote": "c_mt38x3t61u0a0c6mll: created against the ORIGINAL <article class='job-card'> markup; two heal attempts both converged on first-record-only extraction (1 of 6 roles). Superseded by the <ul class='roles'>/<li class='role'> markup fix (commit 4317f12). c_mt41d5pczex8zq60n: created against the new markup; extracted all 6 roles value-correctly but production output kept the wrapped {job_listings, input} shape despite a heal whose preview showed the correct flat shape. Both abandoned collectors are left on Bright Data as records, not deleted. Full saga in PROGRESS.md Session Log."
+}

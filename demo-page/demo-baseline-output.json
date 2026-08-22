@@ -1,0 +1,32 @@
+[
+  {
+    "job_title": "Senior Backend Engineer",
+    "location": "Remote (US)",
+    "application_url": "https://northwindlabs.example/apply/senior-backend-engineer-remote-us"
+  },
+  {
+    "job_title": "Product Designer",
+    "location": "New York, NY",
+    "application_url": "https://northwindlabs.example/apply/product-designer-new-york"
+  },
+  {
+    "job_title": "Platform Engineer, Infrastructure",
+    "location": "Remote (EMEA)",
+    "application_url": "https://northwindlabs.example/apply/platform-engineer-infrastructure-remote-emea"
+  },
+  {
+    "job_title": "Founding Account Executive",
+    "location": "San Francisco, CA",
+    "application_url": "https://northwindlabs.example/apply/founding-account-executive-san-francisco"
+  },
+  {
+    "job_title": "Machine Learning Engineer",
+    "location": "Remote (Global)",
+    "application_url": "https://northwindlabs.example/apply/machine-learning-engineer-remote-global"
+  },
+  {
+    "job_title": "Developer Advocate",
+    "location": "London, UK",
+    "application_url": "https://northwindlabs.example/apply/developer-advocate-london"
+  }
+]

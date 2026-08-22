@@ -81,12 +81,19 @@ interface OrchestrateOpts {
   statePath?: string;
   baselinePath?: string;
   dbPath?: string;
+  // --target=demo|real (default real). Demo branches the config/baseline/state/
+  // audit paths to the demo-page artifacts and SKIPS downstream storage entirely
+  // (the SQLite jobs DB is the real target's downstream product; the demo
+  // target's purpose is only to exercise validate/heal/approve end-to-end).
+  target?: "real" | "demo";
 }
 
 // ---------- Config / file helpers ----------
 
-function loadConfig(): ScraperConfig {
-  return JSON.parse(readFileSync(resolve(REPO_ROOT, "config", "scraper.json"), "utf8")) as ScraperConfig;
+function loadConfig(target: "real" | "demo" = "real"): ScraperConfig {
+  const configFile =
+    target === "demo" ? resolve(REPO_ROOT, "config", "demo-scraper.json") : resolve(REPO_ROOT, "config", "scraper.json");
+  return JSON.parse(readFileSync(configFile, "utf8")) as ScraperConfig;
 }
 
 function loadBaseline(path: string): unknown {
@@ -133,13 +140,22 @@ function summarizePreview(preview: unknown): unknown[] {
 
 type BdataServices = Pick<Services, "runScraper" | "healScraper" | "approveScraper">;
 
-function buildRealServices(cfg: ScraperConfig): BdataServices {
+function buildRealServices(cfg: ScraperConfig, target: "real" | "demo" = "real"): BdataServices {
+  const npmRunScript =
+    target === "demo" ? "npm run scraper:run -- --target=demo" : "npm run scraper:run";
+  const runsLatestPath =
+    target === "demo"
+      ? resolve(REPO_ROOT, "demo-page", "demo-runs", "latest.json")
+      : resolve(REPO_ROOT, "scraper", "runs", "latest.json");
   return {
     async runScraper(): Promise<unknown> {
       // Invoke `npm run scraper:run` so timestamped + latest.json artifacts are
-      // written exactly as a manual run would (per Phase 2 guidance).
-      execSync("npm run scraper:run", { stdio: "inherit", cwd: REPO_ROOT });
-      return JSON.parse(readFileSync(resolve(REPO_ROOT, "scraper", "runs", "latest.json"), "utf8"));
+      // written exactly as a manual run would (per Phase 2 guidance). The demo
+      // target's run-cli path also normalizes the raw wrapped platform output
+      // before writing (see demo-page/normalize-demo-output.ts), so the shape
+      // read back from latest.json is already flat.
+      execSync(npmRunScript, { stdio: "inherit", cwd: REPO_ROOT });
+      return JSON.parse(readFileSync(runsLatestPath, "utf8"));
     },
     async healScraper(prompt: string): Promise<HealResult> {
       const escaped = prompt.replace(/"/g, '\\"');
@@ -161,20 +177,39 @@ function buildRealServices(cfg: ScraperConfig): BdataServices {
 // ---------- The orchestrate flow ----------
 
 export async function orchestrate(opts: OrchestrateOpts = {}): Promise<OrchestrateOutcome> {
-  const auditPath = opts.auditPath ?? resolve(REPO_ROOT, "orchestrator", "audit-log.jsonl");
-  const statePath = opts.statePath ?? resolve(REPO_ROOT, "orchestrator", "state.json");
-  const baselinePath = opts.baselinePath ?? resolve(REPO_ROOT, "scraper", "baseline-output.json");
+  const target = opts.target ?? "real";
+  const auditPath =
+    opts.auditPath ?? resolve(REPO_ROOT, "orchestrator", target === "demo" ? "audit-log-demo.jsonl" : "audit-log.jsonl");
+  const statePath =
+    opts.statePath ?? resolve(REPO_ROOT, "orchestrator", target === "demo" ? "state-demo.json" : "state.json");
+  const baselinePath =
+    opts.baselinePath ??
+    resolve(REPO_ROOT, target === "demo" ? "demo-page/demo-baseline-output.json" : "scraper/baseline-output.json");
   const dbPath = opts.dbPath ?? resolve(REPO_ROOT, "downstream", "data.db");
 
-  const cfg = loadConfig();
-  const real = buildRealServices(cfg);
+  const cfg = loadConfig(target);
+  const real = buildRealServices(cfg, target);
   const services: Services = {
     runScraper: opts.services?.runScraper ?? real.runScraper,
     healScraper: opts.services?.healScraper ?? real.healScraper,
     approveScraper: opts.services?.approveScraper ?? real.approveScraper,
-    syncToDownstream: opts.services?.syncToDownstream
-      ?? (async (records: unknown[], runTimestamp: string) => syncJobs(dbPath, records, runTimestamp)),
+    syncToDownstream:
+      opts.services?.syncToDownstream ??
+      (target === "demo"
+        ? // DEMO TARGET: downstream sync is SKIPPED ENTIRELY. The SQLite jobs DB
+          // (first_seen_at/is_active history + jobs.html) is the real target's
+          // downstream product; demo runs must never write to it. This stub
+          // throws so an accidental call site regression fails loudly instead
+          // of silently polluting the real database.
+          async (): Promise<SyncSummary> => {
+            throw new Error("syncToDownstream called on the demo target - storage is disabled for demo runs.");
+          }
+        : (async (records: unknown[], runTimestamp: string) => syncJobs(dbPath, records, runTimestamp))),
   };
+  // Guard used at both full-validate-PASS call sites below: on the demo target,
+  // syncResult stays null (audit shape already tolerates that) and the DB is
+  // never touched.
+  const skipDownstreamSync = target === "demo";
 
   const baseline = loadBaseline(baselinePath);
   const stateBefore = readState(statePath);
@@ -207,6 +242,7 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
       healPromptSent: stateBefore?.lastHealPrompt ?? null,
       trigger: "found_existing_pending_heal",
       previewResultSummary: summarizePreview(pendingPreview),
+      skipDownstreamSync,
     });
   }
 
@@ -220,8 +256,12 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
     // would have failed otherwise), so the cast is safe. Cast is the cleanest
     // way to satisfy syncToDownstream's `unknown[]` signature without making
     // validate()'s return type parameterised on the input shape.
+    // Demo target: sync is deliberately skipped (see skipDownstreamSync above);
+    // syncResult stays null and no DB file is ever opened.
     const records = (Array.isArray(runOutput) ? runOutput : []) as unknown[];
-    const syncResult = await services.syncToDownstream(records, new Date().toISOString());
+    const syncResult = skipDownstreamSync
+      ? null
+      : await services.syncToDownstream(records, new Date().toISOString());
     const entry: AuditEntry = {
       timestamp: new Date().toISOString(),
       trigger: "healthy_run_no_action",
@@ -231,7 +271,9 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
       collectorStateAfter: collectorStateBefore,
       previewResultSummary: [],
       decision: "no_action",
-      reasoning: "Run validated cleanly against baseline. No heal needed. Synced to downstream storage.",
+      reasoning: skipDownstreamSync
+        ? "Run validated cleanly against baseline. No heal needed. Downstream storage skipped (demo target)."
+        : "Run validated cleanly against baseline. No heal needed. Synced to downstream storage.",
       syncResult,
     };
     appendAuditEntry(auditPath, entry);
@@ -264,6 +306,7 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
     healPromptSent: prompt,
     trigger: "healed_and_approved",
     previewResultSummary: summarizePreview(preview),
+    skipDownstreamSync,
   });
 }
 
@@ -280,6 +323,8 @@ interface PreviewPhaseArgs {
   healPromptSent: string | null;
   trigger: OrchestrateTrigger;
   previewResultSummary: unknown[];
+  // demo target: downstream storage is disabled entirely; syncResult stays null.
+  skipDownstreamSync: boolean;
 }
 
 async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<OrchestrateOutcome> {
@@ -302,9 +347,15 @@ async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<Orchestrate
 
     if (finalResult.pass) {
       decision = "approved";
-      reasoning = "Preview passed and post-approve fresh scrape validated cleanly. Heal confirmed. Synced to downstream storage.";
+      reasoning = args.skipDownstreamSync
+        ? "Preview passed and post-approve fresh scrape validated cleanly. Heal confirmed. Downstream storage skipped (demo target)."
+        : "Preview passed and post-approve fresh scrape validated cleanly. Heal confirmed. Synced to downstream storage.";
+      // Demo target: sync deliberately skipped - unvalidated-or-demo data must
+      // never reach the real SQLite store (see orchestrate() comment).
       const records = (Array.isArray(freshOutput) ? freshOutput : []) as unknown[];
-      syncResult = await args.services.syncToDownstream(records, new Date().toISOString());
+      syncResult = args.skipDownstreamSync
+        ? null
+        : await args.services.syncToDownstream(records, new Date().toISOString());
     } else {
       decision = "escalated_final_validate_failed";
       reasoning = `Preview passed and approve succeeded, but the post-approve fresh scrape FAILED full-validation: ${summarizeValidation(finalResult)}. Left as-is for human inspection (no auto-retry). Unvalidated data NOT synced to storage.`;
@@ -366,8 +417,18 @@ async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<Orchestrate
 // Without this, importing orchestrate() in run-tests.ts would also fire the real
 // production main() and call process.exit, killing the test process.
 async function main(): Promise<void> {
-  console.log(`[orchestrate] starting at ${new Date().toISOString()}`);
-  const outcome = await orchestrate();
+  // --target=demo|real via CLI flag or ORCHESTRATE_TARGET env; default real.
+  const targetFlag = process.argv.find((a) => a.startsWith("--target="));
+  const target =
+    targetFlag !== undefined
+      ? targetFlag.split("=")[1] === "demo"
+        ? ("demo" as const)
+        : ("real" as const)
+      : process.env.ORCHESTRATE_TARGET === "demo"
+        ? ("demo" as const)
+        : ("real" as const);
+  console.log(`[orchestrate] starting at ${new Date().toISOString()} (target: ${target})`);
+  const outcome = await orchestrate({ target });
   console.log("");
   console.log(`[orchestrate] trigger:   ${outcome.trigger}`);
   console.log(`[orchestrate] decision:   ${outcome.decision}`);
