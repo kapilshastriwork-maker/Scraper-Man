@@ -65,13 +65,16 @@ function mapRecord(rec: unknown): DemoJobRecord | null {
  * array shape config/schema.json requires. Accepts either the observed wrapped
  * shape ([{ job_listings: [...], input: {...} }]) or an already-flat array
  * (pass-through, in case production ever starts emitting the requested shape).
- * Throws on any other shape rather than silently returning partial data.
+ *
+ * Malformed input (missing/non-array job_listings, no wrapper, empty listings,
+ * records missing required keys) returns [] rather than throwing: an empty
+ * array is exactly what validate()'s non_empty_array rule catches, so a
+ * genuinely broken scrape becomes a loud VALIDATION FAILURE -> heal prompt
+ * instead of an uncaught exception crashing the orchestrator mid-run.
  */
 export function normalizeDemoOutput(raw: unknown): DemoJobRecord[] {
   if (!Array.isArray(raw) || raw.length === 0) {
-    throw new Error(
-      "normalizeDemoOutput: raw output is not a non-empty array - refusing to guess.",
-    );
+    return [];
   }
 
   // Already-flat pass-through: every element maps cleanly under known keys.
@@ -86,22 +89,19 @@ export function normalizeDemoOutput(raw: unknown): DemoJobRecord[] {
       isRecord(el) && Array.isArray(el["job_listings"]),
   );
   if (wrappers.length !== 1) {
-    throw new Error(
-      `normalizeDemoOutput: expected 1 wrapper object with a job_listings array, found ${wrappers.length}. Raw first element: ${JSON.stringify(raw[0]).slice(0, 300)}`,
-    );
+    return [];
   }
   const listings = wrappers[0]["job_listings"] as unknown[];
-  const mapped = listings.map((rec) => {
+  const mapped: DemoJobRecord[] = [];
+  for (const rec of listings) {
     const job = mapRecord(rec);
+    // Partial record (a required key missing/blank): fail closed to [] so the
+    // validator sees non_empty_array and triggers a heal - never emit a run
+    // that silently lost records.
     if (job === null) {
-      throw new Error(
-        `normalizeDemoOutput: job_listings element missing one of the three required fields: ${JSON.stringify(rec).slice(0, 300)}`,
-      );
+      return [];
     }
-    return job;
-  });
-  if (mapped.length === 0) {
-    throw new Error("normalizeDemoOutput: job_listings array is empty.");
+    mapped.push(job);
   }
   return mapped;
 }
