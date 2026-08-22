@@ -288,6 +288,84 @@ async function testBranchBReusesPendingPreviewWithoutNewHeal(): Promise<TestResu
   };
 }
 
+async function testBranchBDemoNormalizesWrappedPreviewBeforeValidating(): Promise<TestResult> {
+  // Part B2 regression: on the demo target, a cached pending-heal preview in the
+  // platform's RAW wrapped shape ({job_listings, input} with space keys) must be
+  // NORMALIZED before preview-mode validation. Without the fix, the wrapper is
+  // misjudged as one deformed record and the run escalates
+  // (escalated_preview_failed) even though the heal extracted every value
+  // correctly - exactly what happened live on 2026-08-22.
+  const baseline = makeBaseline();
+  const wrappedRawPreview = [
+    {
+      job_listings: [
+        { "job title": "Senior Engineer", location: "San Francisco Bay Area", "application url": "https://jobs.ashbyhq.com/retell-ai/preview-1/application" },
+        { "job title": "Second Engineer", location: "Remote", "application url": "https://jobs.ashbyhq.com/retell-ai/preview-2/application" },
+      ],
+      input: { url: "https://kapilshastriwork-maker.github.io/Scraper-Man/demo-page/" },
+    },
+  ];
+  const seededState = {
+    lastKnownStatus: "awaiting_approval",
+    lastHealPreviewResult: wrappedRawPreview,
+    lastHealPrompt: "pre-seeded demo heal prompt (raw wrapped preview cached)",
+    pendingHealTimestamp: "2026-08-22T11:22:44.053Z",
+    updatedAt: "2026-08-22T11:22:44.053Z",
+  };
+
+  const tmp = mkdtempSync(join(tmpdir(), "orch-test-demo-"));
+  const baselinePath = writeBaseline(tmp, baseline);
+  const auditPath = join(tmp, "audit-log-demo.jsonl");
+  const statePath = join(tmp, "state-demo.json");
+  writeFileSync(statePath, Buffer.from(JSON.stringify(seededState, null, 2), "utf8"));
+
+  const calls: string[] = [];
+  const services: Services = {
+    runScraper: async () => {
+      calls.push("runScraper");
+      // Branch (b) skips the initial run; this is only the post-approve
+      // confirmation scrape. Return a healthy flat population.
+      return baseline;
+    },
+    healScraper: async (prompt: string) => {
+      calls.push("healScraper:" + prompt.slice(0, 30));
+      // Must NEVER be called on branch (b).
+      return { status: "awaiting_approval", preview_result: wrappedRawPreview, prompt };
+    },
+    approveScraper: async () => {
+      calls.push("approveScraper");
+    },
+    syncToDownstream: async (records: unknown[], _runTimestamp: string) => {
+      calls.push(`syncToDownstream:${records.length}`);
+      return { added: records.length, updated: 0, closedOut: 0 };
+    },
+  };
+
+  const outcome = await orchestrate({ target: "demo", services, auditPath, statePath, baselinePath });
+  const approved = calls.includes("approveScraper");
+  const runCalls = calls.filter((c) => c === "runScraper").length;
+  const healCalls = calls.filter((c) => c.startsWith("healScraper")).length;
+  const syncCalls = calls.filter((c) => c.startsWith("syncToDownstream")).length;
+  const auditExists = existsSync(auditPath);
+  const triggerMatches = outcome.trigger === "found_existing_pending_heal";
+  // THE regression assertion: with normalization applied before preview-mode
+  // validation, the wrapped preview validates as 2 healthy records -> approve.
+  // (Pre-fix behavior: escalated_preview_failed.)
+  const decisionMatches = outcome.decision === "approved";
+  // Demo-target invariants still hold: no new heal, one confirmation scrape,
+  // downstream sync never called (syncResult stays null even though the fake
+  // would have answered).
+  const pass = approved && runCalls === 1 && healCalls === 0 && triggerMatches && decisionMatches
+    && auditExists && syncCalls === 0 && outcome.auditEntry.syncResult === null;
+  return {
+    name: "branch (b), demo target: RAW wrapped preview_result is normalized before preview validation -> approves",
+    pass,
+    detail: pass
+      ? `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, syncResult=null`
+      : `approved=${approved}, runScraper=${runCalls}, healScraper=${healCalls}, syncToDownstream=${syncCalls}, trigger=${outcome.trigger}, decision=${outcome.decision}, syncResult=${JSON.stringify(outcome.auditEntry.syncResult)}, auditExists=${auditExists}`,
+  };
+}
+
 function report(results: TestResult[]): void {
   let allOk = true;
   for (const r of results) {
@@ -312,6 +390,7 @@ async function main(): Promise<void> {
     await testDecisionApprovesOnPassingPreview(),
     await testDecisionEscalatesOnFailingPreview(),
     await testBranchBReusesPendingPreviewWithoutNewHeal(),
+    await testBranchBDemoNormalizesWrappedPreviewBeforeValidating(),
   ];
   report(results);
 }

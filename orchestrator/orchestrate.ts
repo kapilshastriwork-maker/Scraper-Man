@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { validate, type ValidationResult } from "../validator/validate.js";
 import { composeHealPrompt } from "./compose-heal-prompt.js";
 import { syncJobs, type SyncSummary } from "../downstream/db.js";
+import { normalizeDemoOutput } from "../demo-page/normalize-demo-output.js";
 
 const REPO_ROOT = process.cwd();
 const BDATA = "npx -p @brightdata/cli bdata";
@@ -211,6 +212,19 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
   // never touched.
   const skipDownstreamSync = target === "demo";
 
+  // Demo target ONLY: the platform emits heal preview_result samples in the same
+  // wrapped {job_listings, input} / space-keyed shape it uses for production
+  // output (documented in demo-page/normalize-demo-output.ts). Production runs
+  // are reshaped by run-cli before validation; previews must be reshaped the
+  // same way BEFORE preview-mode validation, otherwise the wrapped wrapper
+  // object is misjudged as a single deformed record and every legit heal
+  // escalates (the Part B2 escalation root cause). Real target: undefined ->
+  // preview validation sees the raw sample exactly as before. Applied at point
+  // of use only - state.json keeps caching the RAW platform sample unchanged
+  // (normalization is idempotent on already-flat arrays).
+  const adaptPreview =
+    target === "demo" ? (p: unknown): unknown[] => normalizeDemoOutput(p) : undefined;
+
   const baseline = loadBaseline(baselinePath);
   const stateBefore = readState(statePath);
   const collectorStateBefore = stateBefore?.lastKnownStatus ?? "unknown";
@@ -241,7 +255,8 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
       collectorStateAfter: collectorStateBefore,
       healPromptSent: stateBefore?.lastHealPrompt ?? null,
       trigger: "found_existing_pending_heal",
-      previewResultSummary: summarizePreview(pendingPreview),
+      previewResultSummary: summarizePreview(adaptPreview ? adaptPreview(pendingPreview) : pendingPreview),
+      normalizePreview: adaptPreview,
       skipDownstreamSync,
     });
   }
@@ -305,7 +320,8 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
     collectorStateAfter,
     healPromptSent: prompt,
     trigger: "healed_and_approved",
-    previewResultSummary: summarizePreview(preview),
+    previewResultSummary: summarizePreview(adaptPreview ? adaptPreview(preview) : preview),
+    normalizePreview: adaptPreview,
     skipDownstreamSync,
   });
 }
@@ -313,6 +329,8 @@ export async function orchestrate(opts: OrchestrateOpts = {}): Promise<Orchestra
 // ---------- Preview decision phase (shared by branch b and branch c) ----------
 
 interface PreviewPhaseArgs {
+  // The RAW platform sample (state cache / heal output). Normalized first when
+  // normalizePreview is provided (demo target), then validated.
   pendingPreview: unknown[];
   auditPath: string;
   statePath: string;
@@ -323,12 +341,17 @@ interface PreviewPhaseArgs {
   healPromptSent: string | null;
   trigger: OrchestrateTrigger;
   previewResultSummary: unknown[];
+  // demo target only: reshape the wrapped preview sample into flat records
+  // before validating (see adaptPreview in orchestrate()).
+  normalizePreview?: (preview: unknown) => unknown[];
   // demo target: downstream storage is disabled entirely; syncResult stays null.
   skipDownstreamSync: boolean;
 }
 
 async function previewDecisionPhase(args: PreviewPhaseArgs): Promise<OrchestrateOutcome> {
-  const previewResult = validate(args.pendingPreview, args.baseline, "preview");
+  const effectivePreview =
+    args.normalizePreview !== undefined ? args.normalizePreview(args.pendingPreview) : args.pendingPreview;
+  const previewResult = validate(effectivePreview, args.baseline, "preview");
 
   if (previewResult.pass) {
     // --- (e) Preview passed → approve + re-run + final full-validate ---
