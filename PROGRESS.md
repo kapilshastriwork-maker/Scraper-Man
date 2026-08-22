@@ -1,5 +1,15 @@
 # Project Progress Log
 
+## Final Status (all 7 phases done — skimmable summary; details below)
+
+- **Phase 1 — Foundation:** targets locked (1 real: Retell AI via Ashby board + 1 self-controlled demo), schema v1, repo scaffold, human-only setup checklist.
+- **Phase 2 — Base scraper:** live collector on the Ashby board (31-record frozen baseline) after pivoting off the empty Webflow marketing shell; run-cli wrapper + demo page built.
+- **Phase 3 — Validator:** 5 drift-tolerant rules vs the frozen baseline, CLI + fixtures, all green.
+- **Phase 4 — Healing orchestrator:** full validate→heal→preview-gate→approve→verify state machine with DI testability; survived a real heal end-to-end and a state/audit disagreement bug fixed with provenance.
+- **Phase 5 — Downstream + audit timeline:** SQLite storage (upsert/closeout, never delete) wired to sync only on validated PASS paths; committed double-clickable `timeline.html` + `jobs.html`.
+- **Phase 6 — Unattended CI loop:** GitHub Actions cron every 12h committing artifacts back; first organic drift handled unattended (+2 real roles synced, later +4 more overnight).
+- **Phase 7 — Controlled-break demo + polish:** demo target deployed and deliberately broken; three preview-gate escalations vindicated when a manual override produced an empty production run — documented platform limitation (preview ≠ production); heal formally rejected; page left broken by design as evidence. This README polish is the final step.
+
 **Status:** Phase 7 in progress — Parts A & B done (platform limitation documented); remaining: polish + submit
 **Last updated:** 2026-08-22 — Phase 7 Part B
 
