@@ -33,9 +33,9 @@ section.open-roles > h2 { margin: 0 0 1rem; font-size: 1.25rem; }
   align-items: center;
   gap: 0.25rem 1rem;
 }
-.job-title { font-weight: 600; font-size: 1.05rem; margin: 0; grid-column: 1; }
-.job-location { margin: 0; color: #64748b; font-size: 0.95rem; grid-column: 1; }
-.job-apply-link {
+.position-name { font-weight: 600; font-size: 1.05rem; margin: 0; grid-column: 1; }
+.office { margin: 0; color: #64748b; font-size: 0.95rem; grid-column: 1; }
+.cta-button {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
@@ -47,7 +47,7 @@ section.open-roles > h2 { margin: 0 0 1rem; font-size: 1.25rem; }
   font-size: 0.95rem;
   white-space: nowrap;
 }
-.job-apply-link:hover { background: #1d4ed8; }
+.cta-button:hover { background: #1d4ed8; }
 footer.site-footer { text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.85rem; }
 </style>
 </head>
@@ -61,41 +61,57 @@ footer.site-footer { text-align: center; padding: 1.5rem; color: #94a3b8; font-s
   <section class="open-roles">
     <h2>Open Roles</h2>
 
-    <ul class="roles">
-      <li class="role">
-        <h3 class="job-title">Senior Backend Engineer</h3>
-        <p class="job-location">Remote (US)</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/senior-backend-engineer-remote-us">Apply</a>
+    <!-- PRE-SCRIPTED BREAK - NEVER DEPLOY DIRECTLY. This file exists only as
+         source content to copy INTO index.html when triggering the controlled
+         break (see "Live demo workflow" in demo-page/README.md). Restore by
+         copying index-good-backup.html's content into index.html instead. -->
+    <ul class="careers-list">
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Senior Backend Engineer</h3>
+          <p class="office">Remote (US)</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/senior-backend-engineer-remote-us">Apply</a>
       </li>
 
-      <li class="role">
-        <h3 class="job-title">Product Designer</h3>
-        <p class="job-location">New York, NY</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/product-designer-new-york">Apply</a>
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Product Designer</h3>
+          <p class="office">New York, NY</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/product-designer-new-york">Apply</a>
       </li>
 
-      <li class="role">
-        <h3 class="job-title">Platform Engineer, Infrastructure</h3>
-        <p class="job-location">Remote (EMEA)</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/platform-engineer-infrastructure-remote-emea">Apply</a>
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Platform Engineer, Infrastructure</h3>
+          <p class="office">Remote (EMEA)</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/platform-engineer-infrastructure-remote-emea">Apply</a>
       </li>
 
-      <li class="role">
-        <h3 class="job-title">Founding Account Executive</h3>
-        <p class="job-location">San Francisco, CA</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/founding-account-executive-san-francisco">Apply</a>
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Founding Account Executive</h3>
+          <p class="office">San Francisco, CA</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/founding-account-executive-san-francisco">Apply</a>
       </li>
 
-      <li class="role">
-        <h3 class="job-title">Machine Learning Engineer</h3>
-        <p class="job-location">Remote (Global)</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/machine-learning-engineer-remote-global">Apply</a>
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Machine Learning Engineer</h3>
+          <p class="office">Remote (Global)</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/machine-learning-engineer-remote-global">Apply</a>
       </li>
 
-      <li class="role">
-        <h3 class="job-title">Developer Advocate</h3>
-        <p class="job-location">London, UK</p>
-        <a class="job-apply-link" href="https://northwindlabs.example/apply/developer-advocate-london">Apply</a>
+      <li class="opening-card">
+        <div class="opening-details">
+          <h3 class="position-name">Developer Advocate</h3>
+          <p class="office">London, UK</p>
+        </div>
+        <a class="cta-button" href="https://northwindlabs.example/apply/developer-advocate-london">Apply</a>
       </li>
     </ul>
   </section>
