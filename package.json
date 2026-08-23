@@ -17,6 +17,9 @@
     "orchestrate": "tsx orchestrator/orchestrate.ts",
     "orchestrate:demo": "tsx orchestrator/orchestrate.ts --target=demo",
     "demo:test": "tsx demo-page/run-tests.ts",
+    "skills-demo:test": "tsx skills-demo/run-self-heal-test.ts",
+    "mini-heal-demo:test": "tsx mini-heal-demo/run-self-heal-test.ts",
+    "resume:generate": "tsx resume-tailor/generate.ts",
     "orchestrate:test": "tsx orchestrator/run-tests.ts",
     "state:seed": "tsx orchestrator/seed-state-from-recon.ts",
     "audit:view": "tsx orchestrator/view-audit-log.ts",
@@ -33,6 +36,7 @@
     "typescript": "^5.5.0"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3"
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^17.4.2"
   }
 }
