@@ -50,9 +50,19 @@
 <body>
   <header>
     <h1>Orchestrator Audit Timeline</h1>
-    <div class="subtitle">26 entries · reverse-chronological · self-contained static page</div>
+    <div class="subtitle">27 entries · reverse-chronological · self-contained static page</div>
   </header>
   <ol>
+    <li class="entry decision-no_action">
+      <div class="row top-row">
+        <time datetime="2026-09-02T15:24:13.545Z">2026-09-02T15:24:13.545Z</time>
+        <span class="trigger" style="border-color:#16a34a;color:#16a34a">healthy_run_no_action</span>
+        <span class="decision" style="border-color:#16a34a;color:#16a34a">no_action</span>
+      </div>
+      <div class="row validation">pass: true, 36 records vs baseline 31, rules fired: [(none)]</div>
+      <div class="row reasoning" title="Run validated cleanly against baseline. No heal needed. Synced to downstream storage.">Run validated cleanly against baseline. No heal needed. Synced to downstream storage.</div>
+      <div class="sync"><span class="lbl">storage:</span> <span class="add">+0 added</span> · <span class="upd">~36 updated</span> · <span class="close">-0 closedOut</span></div>
+    </li>
     <li class="entry decision-no_action">
       <div class="row top-row">
         <time datetime="2026-09-02T01:32:48.808Z">2026-09-02T01:32:48.808Z</time>
